@@ -2,32 +2,71 @@
 
 The goal of the project is to provide a Python-based tool that is able to retrieve taxonomic information / lineage given a taxonomy ID or NCBI accession number. The tool supports NCBI taxonomy dump files and user defined taxonomies.
 
+## Installation
+
+Use python setup-tool or pip to install this package:
+```
+python setup.py install
+```
+
+## Usage
+
+Use as a python module:
+
+```python
+#import taxonomy as module
+import pytaxa.taxonomy as t
+
+#load taxonomy info
+t.loadTaxonomy( dbPath )
+
+#convert taxid to name
+name = t.taxid2name(tid)
+```
+
+or, run as a standalone converter:
+
+```sh
+$ pytaxonomy
+```
+
 ## Overview of functions
 
 Loading taxonomy information:
 
-- loadTaxonomy( dbpath=taxonomyDir )
-- loadRefSeqCatelog( refseq_catelog_file, seq_type="nc" )
+- loadTaxonomy( dbpath=taxonomyDir, cus_taxonomy_file=None, auto_download=True )
+
+Convert taxonomy id:
+
+- taxid2rank( taxID, guess_strain=True )
+    - for example: `taxid2rank( 2697049 )` => `strain`
+- taxid2name( taxID )
+    - for example: `taxid2name( 2697049 )` => `Severe acute respiratory syndrome coronavirus 2`
+- taxid2type( taxID )
+    - for example: `taxid2type( 2697049 )` => `0`
+- taxid2parent( taxID )
+    - for example: `taxid2parent( 2697049 )` => `694009`
+- taxid2nameOnRank( taxID, r )
+    - for example: `taxid2nameOnRank( 2697049, 'genus')` => `Betacoronavirus`
+- taxid2taxidOnRank( taxID, r )
+    - for example: `taxid2taxidOnRank( 2697049, 'genus')` => `694002`
+- taxidIsLeaf( taxID )
+    - for example: `taxidIsLeaf( 2697049 )` => `True`
+- taxid2fullLineage( taxID )
+- taxid2fullLinkDict( taxID )
+- taxid2nearestMajorTaxid( taxID )
+    - for example: `taxid2nearestMajorTaxid( 2697049 )` => `694009`
+- taxid2lineage( taxID, print_all_rank=1, print_strain=0)
+    - for example: `taxid2lineage( 2697049 )` => `Viruses|Pisuviricota|Pisoniviricetes|Nidovirales|Coronaviridae|Betacoronavirus|Severe acute respiratory syndrome-related coronavirus|Severe acute respiratory syndrome coronavirus 2`
+- taxid2lineageDICT( taxID, print_all_rank=1, print_strain=0)
+    - for example: `taxid2lineageDICT( 2697049, 1, 1 )` => `{'strain': {'name': 'Severe acute respiratory syndrome coronavirus 2', 'taxid': '2697049'}, 'species': {'name': 'Severe acute respiratory syndrome-related coronavirus', 'taxid': '694009'}, 'genus': {'name': 'Betacoronavirus', 'taxid': '694002'}, 'family': {'name': 'Coronaviridae', 'taxid': '11118'}, 'order': {'name': 'Nidovirales', 'taxid': '76804'}, 'class': {'name': 'Pisoniviricetes', 'taxid': '2732506'}, 'phylum': {'name': 'Pisuviricota', 'taxid': '2732408'}, 'superkingdom': {'name': 'Viruses', 'taxid': '10239'}}`
+- taxid2lineageTEXT( taxID, print_all_rank=1, print_strain=0)
+    - for example: `taxid2lineageTEXT( 2697049, 1, 1 )` => `k__Viruses;p__Pisuviricota;c__Pisoniviricetes;o__Nidovirales;f__Coronaviridae;g__Betacoronavirus;s__Severe_acute_respiratory_syndrome-related_coronavirus;st__Severe_acute_respiratory_syndrome_coronavirus_2`
 
 Convert accession number:
 
 - acc2taxid( acc )
 
-Convert taxonomy id:
-
-- taxid2rank( taxID, guess_strain=True )
-- taxid2name( taxID )
-- taxid2depth( taxID )
-- taxid2type( taxID )
-- taxid2parent( taxID )
-- taxid2nameOnRank( taxID, r )
-- taxid2taxidOnRank( taxID, r )
-- taxidIsLeaf( taxID )
-- taxid2fullLineage( taxID )
-- taxid2fullLinkDict( taxID )
-- taxid2nearestMajorTaxid( taxID )
-- taxid2lineage( tid, print_all_rank=1, print_strain=0)
-- taxid2lineageDICT( tid, print_all_rank=1, print_strain=0)
 
 ## Taxonomy information files
 
@@ -50,30 +89,6 @@ decompressed from taxdump.tar.gz
 4. (optional) Mapping table of accession number to taxid in TSV format
 - accession2taxid.tsv (optional; for function `acc2taxid()`)
 
-## Usage
-
-As a standalone converter:
-
-```sh
-# Pre-processed taxonomy tsv files in ./database directory
-./taxonomy.py
-
-# Decompressed NCBI taxonomy dump files in ./taxonomy directory
-./taxonomy.py taxonomy
-```
-
-or can be used as a python module:
-
-```python
-#import taxonomy as module
-import taxonomy as t
-
-#load taxonomy info
-t.loadTaxonomy( dbPath )
-
-#convert taxid to name
-name = taxid2name(tid)
-```
 
 ## Pre-processing taxonomy information
 
