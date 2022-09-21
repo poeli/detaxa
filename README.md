@@ -77,22 +77,22 @@ Convert accession number:
 PyTaxa takes various taxonomy files. If the path of the taxonomy directory isn't provided, it will use `taxonomy_db/` as the default path and search for following files at the taxonomy directory:
 
 1. NCBI taxonomy dump file (compressed) - `taxdump.tar.gz`:
-- The compressed file `taxdump.tar.gz` can be downloaded from `ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz` directly.
+    - The compressed file `taxdump.tar.gz` can be downloaded from `ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz` directly.
 
 2. NCBI taxonomy dump files (decompressed) - `nodes.dmp`, `names.dmp` and `merged.dmp`(optional):
-- These files can be decompressed from `taxdump.tar.gz`
+    - These files can be decompressed from `taxdump.tar.gz`
 
 3. Pre-processed taxonomy information tsv files:
-- See [Generating taxonomy.tsv](#taxonomy_tsv)) for details
-    - taxonomy.tsv
-    - taxonomy.custom.tsv (optional; for custom taxonomies)
-    - taxonomy.merged.tsv (optional; for merged taxonomic nodes)
+    - See [[Generating taxonomy.tsv](#taxonomy_tsv)] for details
+        - taxonomy.tsv
+        - taxonomy.custom.tsv (optional; for custom taxonomies)
+        - taxonomy.merged.tsv (optional; for merged taxonomic nodes)
 
 4. Full lineages provided in plan text:
-- See [custom taxonomy > lineage format](#lineage_format)) for details
+    - See [[custom taxonomy > lineage format](#lineage_format)] for details
 
 5. (optional) Mapping table of accession number to taxid in TSV format
-- accession2taxid.tsv (requirement for function `acc2taxid()`)
+    - accession2taxid.tsv (requirement for function `acc2taxid()`)
 
 
 ## Pre-processing taxonomy information
