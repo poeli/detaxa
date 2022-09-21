@@ -16,7 +16,6 @@ logging.basicConfig(
 )
 
 @pytaxacli.command('query')
-
 @click.option('-i', '--id',
               help='a taxonomy id or accession# (if available)',
               required=True,

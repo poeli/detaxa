@@ -27,7 +27,7 @@ name = t.taxid2name(tid)
 or, run as a standalone converter:
 
 ```sh
-$ pytaxonomy query -i 2697049
+$ pytaxa query -i 2697049
 ```
 
 ## Overview of functions
