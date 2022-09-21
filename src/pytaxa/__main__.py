@@ -25,22 +25,25 @@ logging.basicConfig(
               required=False,
               default=None,
               type=str)
+@click.option('-c', '--custom-taxa',
+              help='path of custom taxonomy file',
+              required=False,
+              default=None,
+              type=str)
+@click.option('-f', '--custom-fmt',
+              help='custom taxonomy format "tsv" or "lineage"',
+              required=False,
+              default='tsv',
+              type=str)
 
-def demo(database, id):
-    t.loadTaxonomy( database )
-    inid = id
-
-    if inid[0] in "1234567890":
-        taxid = inid
-    else:
-        taxid = t.acc2taxid( inid )
-        print( "acc2taxid( %s ) => %s"   % (inid, taxid) )
+def query(id, database, custom_taxa, custom_fmt):
+    t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+    taxid = id
 
     if taxid:
         print( "taxid2name( %s )                 => %s" % (taxid, t.taxid2name(taxid)) )
         print( "taxid2rank( %s )                 => %s" % (taxid, t.taxid2rank(taxid)) )
         print( "taxid2type( %s )                 => %s" % (taxid, t.taxid2type(taxid)) )
-        print( "taxid2depth( %s )                => %s" % (taxid, t.taxid2depth(taxid)) )
         print( "taxid2parent( %s )               => %s" % (taxid, t.taxid2parent(taxid)) )
         print( "taxidIsLeaf( %s )                => %s" % (taxid, t.taxidIsLeaf(taxid)) )
         print( "taxid2nearestMajorTaxid( %s )    => %s" % (taxid, t.taxid2nearestMajorTaxid(taxid)) )

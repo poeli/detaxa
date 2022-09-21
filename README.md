@@ -34,7 +34,7 @@ $ pytaxa query -i 2697049
 
 Loading taxonomy information:
 
-- loadTaxonomy( dbpath=taxonomyDir, cus_taxonomy_file=None, auto_download=True )
+- loadTaxonomy( dbpath=None, cus_taxonomy_file=None, cus_taxonomy_format='tsv', auto_download=True )
 
 Convert taxonomy id:
 
@@ -131,7 +131,11 @@ The format of taxonomy.tsv (and taxonomy.custom.tsv) :
 
 #### Generating taxonomy.custom.tsv
 
-`taxonomy.custom.tsv` uses the same format as `taxonomy.tsv` to expand taxonomic nodes. It's optional but recommended to add some pesudo-nodes for viral taxonomy as below:
+Two formats, `tsv` and `lineage`, can be used to provide cutom taxonomy infomation and being loaded with `loadTaxonomy(cus_taxonomy_file=[PATH], cus_taxonomy_format=[FORMAT])`. There are a couple examples files in the `example
+
+##### `tsv` format
+
+The default filename for custom taxonomy in `tsv` format is `taxonomy.custom.tsv`. The `taxonomy.custom.tsv` uses the same format as `taxonomy.tsv` to expand taxonomic nodes. It's optional but recommended to add some pesudo-nodes for viral taxonomy as below:
 
 ```sh
 bind "set disable-completion on"
@@ -154,6 +158,27 @@ bind "set disable-completion on"
 EOM
 bind "set disable-completion off"
 ```
+
+##### `lineage` format
+
+The `lineage` format provided the full lineage of a taxa in one linear. The node info in a lineage uses `[rank]__[name];` to provide node infomation. For example:
+
+```
+sk__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Prevotellaceae;g__Massiliprevotella;s__Massiliprevotella_massiliensis
+```
+
+Pytaxa will automatically convert following abbreviations to the full name of rank. Note that these ranks are defined as major ranks but Pytaxa allows custom ranks as well.
+
+| Abbr   | Ranks           | 
+|--------|-----------------| 
+|  'sk'  |  'superkingdom' |
+|  'p'   |  'phylum'       |
+|  'c'   |  'class'        |
+|  'o'   |  'order'        |
+|  'f'   |  'family'       |
+|  'g'   |  'genus'        |
+|  's'   |  'species'      |
+|  'n'   |  'strain'       |
 
 #### Generating taxonomy.merged.tsv
 

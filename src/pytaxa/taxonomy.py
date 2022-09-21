@@ -36,24 +36,24 @@ tidLineage     = {}
 tidLineageDict = {}
 
 major_level_to_abbr = {
-    'superkingdom' : 'k',
+    'superkingdom' : 'sk',
     'phylum'       : 'p',
     'class'        : 'c',
     'order'        : 'o',
     'family'       : 'f',
     'genus'        : 'g',
     'species'      : 's',
-    'strain'       : 'st',
+    'strain'       : 'n',
 }
 abbr_to_major_level = {
-    'k'            : 'superkingdom',
+    'sk'           : 'superkingdom',
     'p'            : 'phylum',
     'c'            : 'class',
     'o'            : 'order',
     'f'            : 'family',
     'g'            : 'genus',
     's'            : 'species',
-    'st'           : 'strain',
+    'n'            : 'strain',
 }
 
 ####################
@@ -311,14 +311,14 @@ def _taxid2lineage(tid, print_all_rank, print_strain, replace_space2underscore, 
     lineage = []
 
     level = {
-        'k' : '',
+        'sk' : '',
         'p' : '',
         'c' : '',
         'o' : '',
         'f' : '',
         'g' : '',
         's' : '',
-        'st' : ''
+        'n' : ''
     }
 
     rank = taxid2rank(taxID)
@@ -350,7 +350,7 @@ def _taxid2lineage(tid, print_all_rank, print_strain, replace_space2underscore, 
 
     last = str_name
 
-    ranks = ['st', 's','g','f','o','c','p','k']
+    ranks = ['n','s','g','f','o','c','p','sk']
     idx = 0
     
     # input taxid is a major rank
@@ -436,7 +436,11 @@ def lca_taxid(taxids):
 
     return '1'
 
-def loadTaxonomy( dbpath=None, cus_taxonomy_file=None, auto_download=True):
+def loadTaxonomy( dbpath=None, 
+                  cus_taxonomy_file=None, 
+                  cus_taxonomy_format="tsv", 
+                  auto_download=True
+    ):
     global taxonomy_dir
 
     if dbpath:
@@ -501,7 +505,38 @@ def loadTaxonomy( dbpath=None, cus_taxonomy_file=None, auto_download=True):
             _die( "[ERROR] No available taxonomy files." )
 
     # try to load taxonomy from taxonomy.tsv
-    if os.path.isfile( taxdump_tgz_file ):
+    if os.path.isfile( nodes_dmp_file ) and  os.path.isfile( names_dmp_file ):
+        try:
+            # read name from names.dmp
+            logging.info( f"Open taxonomy name file: {names_dmp_file}" )
+            with open(names_dmp_file) as f:
+                for line in f:
+                    tid, name, tmp, nametype = line.rstrip('\r\n').split('\t|\t')
+                    if not nametype.startswith("scientific name"):
+                        continue
+                    taxNames[tid] = name
+                f.close()
+                logging.info( f"Done parsing taxonomy name file." )    
+
+            # read taxonomy info from nodes.dmp
+            logging.info( f"Open taxonomy node file: {nodes_dmp_file}" )
+            with open(nodes_dmp_file) as f:
+                for line in f:
+                    fields = line.rstrip('\r\n').split('\t|\t')
+                    tid = fields[0]
+                    parent = fields[1]
+                    taxParents[tid] = parent
+                    taxDepths[tid] = taxDepths[parent]+1 if parent in taxDepths else 0 # could have potiential bug if child node is parsed before parent node.
+                    taxRanks[tid] = fields[2]
+                    if parent in taxNumChilds:
+                        taxNumChilds[parent] += 1
+                    else:
+                        taxNumChilds[parent] = 1
+                f.close()
+                logging.info( f"Done parsing taxonomy node file." )
+        except IOError:
+            _die( "Failed to open taxonomy files (taxonomy.tsv, nodes.dmp and names.dmp)." )
+    elif os.path.isfile( taxdump_tgz_file ):
         try:
             logging.info( f"Open taxonomy file: {taxdump_tgz_file}" )
             tar = tarfile.open(taxdump_tgz_file, "r:gz")
@@ -533,63 +568,8 @@ def loadTaxonomy( dbpath=None, cus_taxonomy_file=None, auto_download=True):
                 else:
                     taxNumChilds[parent] = 1
             f.close()
-
-            logging.info( "Extract merged taxonomy node file: merged.dmp" )
-            member = tar.getmember("merged.dmp")
-            f = tar.extractfile(member)
-            for line in f.readlines():
-                fields = line.decode('utf8').rstrip('\r\n').replace("\t","").split('|')
-                mtid = fields[0]
-                tid = fields[1]
-                taxMerged[mtid] = tid
-            f.close()
-
         except IOError:
             _die( "Failed to load taxonomy from %s"%taxdump_tgz_file )
-    elif os.path.isfile( names_dmp_file ):
-        try:
-            # read name from names.dmp
-            logging.info( f"Open taxonomy name file: {names_dmp_file}" )
-            with open(names_dmp_file) as f:
-                for line in f:
-                    tid, name, tmp, nametype = line.rstrip('\r\n').split('\t|\t')
-                    if not nametype.startswith("scientific name"):
-                        continue
-                    taxNames[tid] = name
-                f.close()
-                logging.info( f"Done parsing taxonomy name file." )    
-
-            # read taxonomy info from nodes.dmp
-            logging.info( f"Open taxonomy node file: {nodes_dmp_file}" )
-            with open(nodes_dmp_file) as f:
-                for line in f:
-                    fields = line.rstrip('\r\n').split('\t|\t')
-                    tid = fields[0]
-                    parent = fields[1]
-                    taxParents[tid] = parent
-                    taxDepths[tid] = taxDepths[parent]+1 if parent in taxDepths else 0 # could have potiential bug if child node is parsed before parent node.
-                    taxRanks[tid] = fields[2]
-                    if parent in taxNumChilds:
-                        taxNumChilds[parent] += 1
-                    else:
-                        taxNumChilds[parent] = 1
-                f.close()
-                logging.info( f"Done parsing taxonomy node file." )
-
-            if os.path.isfile( merged_dmp_file ):
-                logging.info( f"Open merged taxonomy node file: {merged_dmp_file}" )
-                with open(merged_dmp_file) as f:
-                    for line in f:
-                        line = line.rstrip('\r\n')
-                        if not line: continue
-                        fields = line.replace("\t","").split('|')
-                        mtid = fields[0]
-                        tid = fields[1]
-                        taxMerged[mtid] = tid
-                    f.close()
-                    logging.info( f"Done parsing merged taxonomy file." )
-        except IOError:
-            _die( "Failed to open taxonomy files (taxonomy.tsv, nodes.dmp and names.dmp)." )
     elif os.path.isfile( taxonomy_file ):
         logging.info( "Open taxonomy file: %s"% taxonomy_file )
         try:
@@ -606,24 +586,24 @@ def loadTaxonomy( dbpath=None, cus_taxonomy_file=None, auto_download=True):
                         taxNumChilds[parent] = 1
                 f.close()
                 logging.info( f"Done parsing taxonomy file." )
-
-            #try to load merged taxids
-            if os.path.isfile( merged_taxonomy_file ):
-                logging.info( "Open merged taxonomy node file: %s"% merged_taxonomy_file )
-                with open(merged_taxonomy_file) as f:
-                    for line in f:
-                        line = line.rstrip('\r\n')
-                        if not line: continue
-                        mtid, tid = line.split('\t')
-                        taxMerged[mtid] = tid
-                    f.close()
-                    logging.info( f"Done parsing merged taxonomy file." )
         except IOError:
             _die( "Failed to open taxonomy file: %s." % taxonomy_file )
 
+    #try to load merged taxids
+    if os.path.isfile( merged_taxonomy_file ):
+        logging.info( "Open merged taxonomy node file: %s"% merged_taxonomy_file )
+        with open(merged_taxonomy_file) as f:
+            for line in f:
+                line = line.rstrip('\r\n')
+                if not line: continue
+                mtid, tid = line.split('\t')
+                taxMerged[mtid] = tid
+            f.close()
+            logging.info( f"Done parsing merged taxonomy file." )
+
     # try to load custom taxonomy from taxonomy.custom.tsv
-    if os.path.isfile( cus_taxonomy_file ):
-        logging.info( "Open custom taxonomy node file: %s"% cus_taxonomy_file)
+    if os.path.isfile(cus_taxonomy_file) and (cus_taxonomy_format=='tsv'):
+        logging.info( "Open custom taxonomy node file (tsv format): %s"% cus_taxonomy_file)
         try:
             with open(cus_taxonomy_file) as f:
                 for line in f:
@@ -642,6 +622,59 @@ def loadTaxonomy( dbpath=None, cus_taxonomy_file=None, auto_download=True):
                 logging.info( f"Done parsing custom taxonomy file." )
         except IOError:
             _die( "Failed to open custom taxonomy file: %s." % cus_taxonomy_file )
+
+    # try to load custom taxonomy from lineage file
+    if os.path.isfile(cus_taxonomy_file) and (cus_taxonomy_format=='lineage'):
+        logging.info( "Open custom taxonomy node file (lineage format): %s"% cus_taxonomy_file)
+        try:
+            with open(cus_taxonomy_file) as f:
+                for line in f:
+                    line = line.rstrip('\r\n')
+                    if not line: continue
+                    if line.startswith('#'): continue
+                    if not line.startswith('sk__'):
+                        logging.warn( f"A text line of lineage has to start with 'sk__'...skipped: {line}" )
+                        continue
+
+                    temp = line.split(';')
+                    p_name = ''
+                    rank = ''
+                    name = ''
+
+                    for i in range(1, len(temp)+1):
+                        # this taxa
+                        (rank_abbr, name) = temp[-i].split('__')
+                        # for na taxon (no_{rank_abbr}_rank)
+                        if name=="":
+                            name = p_name
+
+                        # paranet taxa
+                        try:
+                            p_name = temp[-(i+1)].split('__')[1]
+                            if p_name=="":
+                                p_name = f'{name} - no_{rank_abbr}_rank'
+                        except:
+                            # for the superkingdom rank, assign parant taxid to 1 (root)
+                            p_name = '1'
+
+                        if rank_abbr in abbr_to_major_level:
+                            rank = abbr_to_major_level[rank_abbr]
+                        else:
+                            rank = rank_abbr
+                            
+                        tid = name
+                        taxParents[tid] = p_name
+                        taxRanks[tid] = rank
+                        taxNames[tid] = name
+                        if p_name in taxNumChilds:
+                            taxNumChilds[p_name] += 1
+                        else:
+                            taxNumChilds[p_name] = 1
+                f.close()
+                logging.info( f"Done parsing custom taxonomy file." )
+        except IOError:
+            _die( "Failed to open custom taxonomy file: %s." % cus_taxonomy_file )
+
 
     logging.info( "Done parsing taxonomy files (%d taxons loaded)" % len(taxParents) )
 
@@ -671,7 +704,7 @@ def _checkTaxonomy(taxID="", acc=""):
         if taxID in taxMerged:
             taxID = taxMerged[taxID]
 
-    if taxID in taxNames and taxID in taxParents and taxID in taxParents:
+    if (taxID in taxNames) and (taxID in taxParents):
         return taxID
     else:
         return "unknown"
