@@ -1,4 +1,4 @@
-# Taxonomy
+# PyTaxa
 
 The goal of the project is to provide a Python-based tool that is able to retrieve taxonomic information / lineage given a taxonomy ID or NCBI accession number. The tool supports NCBI taxonomy dump files and user defined taxonomies.
 
@@ -86,7 +86,9 @@ decompressed from taxdump.tar.gz
 - taxonomy.custom.tsv (optional; for custom taxonomies)
 - taxonomy.merged.tsv (optional; for merged taxonomic nodes)
 
-4. (optional) Mapping table of accession number to taxid in TSV format
+4. Full lineages provided in plan text (see [custom taxonomy > lineage format](#lineage_format))
+
+5. (optional) Mapping table of accession number to taxid in TSV format
 - accession2taxid.tsv (optional; for function `acc2taxid()`)
 
 
@@ -129,7 +131,7 @@ The format of taxonomy.tsv (and taxonomy.custom.tsv) :
 | 4      | Rank            | 
 | 5      | Scientific name | 
 
-#### Generating taxonomy.custom.tsv
+#### Generating custom taxonomy
 
 Two formats, `tsv` and `lineage`, can be used to provide cutom taxonomy infomation and being loaded with `loadTaxonomy(cus_taxonomy_file=[PATH], cus_taxonomy_format=[FORMAT])`. There are a couple examples files in the `example
 
@@ -159,7 +161,7 @@ EOM
 bind "set disable-completion off"
 ```
 
-##### `lineage` format
+##### `lineage` format <a name="lineage_format"></a>
 
 The `lineage` format provided the full lineage of a taxa in one linear. The node info in a lineage uses `[rank]__[name];` to provide node infomation. For example:
 
@@ -167,7 +169,7 @@ The `lineage` format provided the full lineage of a taxa in one linear. The node
 sk__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Prevotellaceae;g__Massiliprevotella;s__Massiliprevotella_massiliensis
 ```
 
-Pytaxa will automatically convert following abbreviations to the full name of rank. Note that these ranks are defined as major ranks but Pytaxa allows custom ranks as well.
+PyTaxa will automatically convert following abbreviations to the full name of rank. Note that these ranks are defined as major ranks but PyTaxa allows custom ranks as well.
 
 | Abbr   | Ranks           | 
 |--------|-----------------| 
