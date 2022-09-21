@@ -15,14 +15,15 @@ import logging
 # Global variables #
 ####################
 
-# set default 
+# Set default path of taxonomy_db/:
+# The default `taxonomy_db/` path is your the location
 lib_path = os.path.dirname(os.path.realpath(__file__))
 taxonomy_dir = lib_path + "/taxonomy_db"
 
-if not os.path.isdir(taxonomy_dir):
-    temp = os.getcwd() + "/taxonomy_db"
-    if os.path.isdir(temp):
-        taxonomy_dir = temp
+if os.path.isdir( "./taxonomy_db" ):
+    taxonomy_dir = "./taxonomy_db"
+elif os.path.isdir( os.getcwd()+"/taxonomy_db" ):
+    taxonomy_dir = os.getcwd()+"/taxonomy_db"
 
 taxDepths      = {}
 taxParents     = {}
@@ -474,14 +475,29 @@ def loadTaxonomy( dbpath=None, cus_taxonomy_file=None, auto_download=True):
             r = requests.get(url)
             if not os.path.exists( taxonomy_dir ):
                 os.makedirs( taxonomy_dir )
-            with open(f'{taxonomy_dir}/taxdump.tar.gz', 'wb') as f:
+            
+            taxdump_tgz_file = f'{taxonomy_dir}/taxdump.tar.gz'
+
+            with open(taxdump_tgz_file, 'wb') as f:
                 f.write(r.content)
-            if os.path.getsize( f'{taxonomy_dir}/taxdump.tar.gz' ):
-                logging.info( f"Saved to {taxonomy_dir}/taxdump.tar.gz." )
+            if os.path.getsize( taxdump_tgz_file ):
+                logging.info( f"Saved to {taxdump_tgz_file}." )
             else:
-                _die( "[ERROR] Failed to download taxonomy files." )    
+                logging.fatal( f"Failed to download or save taxonomy files." )
+                _die( "[ERROR] Failed to download or save taxonomy files." )    
+
+            # extract
+            tax_tar = tarfile.open(taxdump_tgz_file, "r:gz")
+            tax_tar.extract('nodes.dmp', taxonomy_dir)
+            tax_tar.extract('names.dmp', taxonomy_dir)
+            tax_tar.extract('merged.dmp', taxonomy_dir)
+            tax_tar.close()
+            # delete taxdump_tgz_file
+            os.remove(taxdump_tgz_file)
+
         else:
             logging.info( f"Auto-download is off." )
+            logging.fatal( f"No available taxonomy files." )
             _die( "[ERROR] No available taxonomy files." )
 
     # try to load taxonomy from taxonomy.tsv

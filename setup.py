@@ -3,6 +3,10 @@ import sys
 
 from src.pytaxa import __version__ as ptv
 
+INSTALL_REQUIRES = [
+    pkg for pkg in open('requirements.txt').readlines()
+]
+
 setup(
     name='pytaxa',
     version= ptv,
@@ -20,11 +24,9 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
     entry_points={ 
-        'console_scripts': ['pytaxa = pytaxa.__main__' ] 
+        'console_scripts': ['pytaxa = pytaxa.__main__:pytaxacli' ] 
     },
-    install_requires=[
-        "requests"
-    ],
+    install_requires=INSTALL_REQUIRES,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

@@ -27,7 +27,7 @@ name = t.taxid2name(tid)
 or, run as a standalone converter:
 
 ```sh
-$ pytaxonomy
+$ pytaxonomy query -i 2697049
 ```
 
 ## Overview of functions
@@ -70,7 +70,7 @@ Convert accession number:
 
 ## Taxonomy information files
 
-The `taxonomy.py` will take 4 types of NCBI taxonomy information:
+This package takes following 4 types of NCBI taxonomy files.
 
 1. NCBI taxonomy dump file (compressed):
 ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz

@@ -2,6 +2,12 @@
 import os, sys, logging
 import argparse as ap
 from . import taxonomy as t
+from . import __version__
+import click
+
+@click.group(help=f"""PyTaxa taxonomy utility v{t.__version__}.""")
+def pytaxacli():
+    pass
 
 logging.basicConfig(
     level=logging.INFO,
@@ -9,16 +15,22 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M',
 )
 
-#loading taxonomy
-t.loadTaxonomy( sys.argv[1] if len(sys.argv)>1 else None)
+@pytaxacli.command('query')
 
-inid = 0
-try:
-    inid = input("\nEnter acc/taxid: ")
-except:
-    inid = 0
+@click.option('-i', '--id',
+              help='a taxonomy id or accession# (if available)',
+              required=True,
+              type=str)
+@click.option('-d', '--database',
+              help='path of taxonomy_db/',
+              required=False,
+              default=None,
+              type=str)
 
-while(inid):
+def demo(database, id):
+    t.loadTaxonomy( database )
+    inid = id
+
     if inid[0] in "1234567890":
         taxid = inid
     else:
@@ -45,7 +57,5 @@ while(inid):
     else:
         print( "No taxid found." )
 
-    try:
-        inid = input("\nEnter acc/taxid: ")
-    except:
-        inid = 0
+if __name__ == '__main__':
+    pytaxacli()
