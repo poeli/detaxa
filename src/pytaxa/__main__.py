@@ -51,10 +51,10 @@ def query(id, database, custom_taxa, custom_fmt):
         print( "taxid2taxidOnRank( %s, 'genus')  => %s" % (taxid, t.taxid2taxidOnRank(taxid, "genus")) )
         print( "taxid2nameOnRank( %s, 'phylum')  => %s" % (taxid, t.taxid2nameOnRank(taxid, "phylum")) )
         print( "taxid2taxidOnRank( %s, 'phylum') => %s" % (taxid, t.taxid2taxidOnRank(taxid, "phylum")) )
-        print( "taxid2lineage( %s )              => %s" % (taxid, t.taxid2lineage(taxid)) )
-        print( "taxid2lineageDICT( %s, 1, 1 )    => %s" % (taxid, t.taxid2lineageDICT(taxid,1,1)) )
-        print( "taxid2lineageTEXT( %s, 1, 1 )    => %s" % (taxid, t.taxid2lineageTEXT(taxid,1,1)) )
+        print( "taxid2lineage( %s, sep=';' )     => %s" % (taxid, t.taxid2lineage(taxid, sep=';')) )
+        print( "taxid2lineageDICT( %s )          => %s" % (taxid, t.taxid2lineageDICT(taxid)) )
         print( "taxid2fullLineage( %s )          => %s" % (taxid, t.taxid2fullLineage(taxid)) )
+        print( "taxid2fullLineage( %s, sep=';' ) => %s" % (taxid, t.taxid2fullLineage(taxid, sep=';')) )
         print( "taxid2fullLinkDict( %s )         => %s" % (taxid, t.taxid2fullLinkDict(taxid)) )
     else:
         print( "No taxid found." )

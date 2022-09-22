@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-__version__="0.5.0"
 
 # Po-E (Paul) Li
 # B-11, Los Alamos National Lab
@@ -59,71 +58,6 @@ abbr_to_major_level = {
 ####################
 #      Methods     #
 ####################
-
-def taxidStatus( taxID ):
-    if taxID in taxMerged:
-        return taxMerged[taxID]
-
-    if taxID in taxNames and taxID in taxNames and taxID in taxRanks:
-        if '.' in taxID:
-            return "valid custom"
-        return "valid"
-    else:
-        return "invalid"
-
-def acc2taxid( acc ):
-    _checkTaxonomy()
-
-    accession2taxid_file = f"{taxonomy_dir}/accession2taxid.tsv"
-    #remove version number#
-    acc = acc.split('.')[0]
-
-    logging.info( f"acc2taxid from file: {accession2taxid_file}" )
-
-    if not acc in accTid:
-        with open( accession2taxid_file ) as f:
-            f.seek(0, 2)
-            start = 0
-            end = f.tell()
-            accCur = ""
-            
-            logging.info( f"acc2taxid from file: {accession2taxid_file}" )
-            
-            while( acc != accCur and start < end ):
-                
-                posNew = (end+start)/2
-                
-                f.seek( posNew )
-        
-                if posNew != start: f.readline()
-
-                line = f.readline()    
-                
-                logging.info( "start: %15d, posNew: %15d, end: %15d, line: %s" % (start, posNew, end, line) )
-                if line :
-                    (accNew, tid) = line.split('\t')
-                else:
-                    break
-
-                if acc > accNew and accCur != accNew and accNew:
-                    if accNew: posNew = f.tell()
-                    start = posNew
-                    if start >= end: end = start+1
-                else:
-                    end = posNew
-                
-                accCur = accNew
-
-            f.close()
-
-            if accCur == acc:
-                accTid[acc] = tid.strip()
-            else:
-                accTid[acc] = ""
-
-    tid = _checkTaxonomy(accTid[acc])
-
-    return tid
 
 def taxid2rank( taxID, guess_strain=True ):
     taxID = _checkTaxonomy( taxID )
@@ -241,41 +175,54 @@ def taxidIsLeaf( taxID ):
     else:
         return False
 
-def taxid2fullLineage( taxID ):
+def _taxid2fullLink(taxID):
     taxID = _checkTaxonomy( taxID )
-    if taxID == "unknown": return "unknown"
-    fullLineage = ""
-
-    while taxID != '1':
-        rank = _getTaxRank(taxID)
-        name = _getTaxName(taxID)
-        if not name: break
-        fullLineage += "%s|%s|%s|"%(rank,taxID,name)
-        taxID = taxParents[taxID]
-
-    return fullLineage
-
-def taxid2fullLinkDict( taxID ):
-    taxID = _checkTaxonomy( taxID )
-    if taxID == "unknown": return "unknown"
-    link = {}
+    if taxID == "unknown": return {}
+    link = _autoVivification()
 
     while taxID != '1':
         name = _getTaxName(taxID)
         if not name: break
-
-        parID = taxParents[taxID]
+        
+        parID = _getTaxParent(taxID)
         link[parID] = taxID
         taxID = parID
-
+    
     return link
+
+def taxid2fullLineage( taxID, sep='|', use_rank_abbr=False, space2underscore=True):
+    link = _taxid2fullLink(taxID)
+    texts = []
+    if len(link):
+        for p_taxID in link:
+            taxID = link[p_taxID]
+            rank = _getTaxRank(taxID)
+            name = _getTaxName(taxID)
+
+            if use_rank_abbr and (rank in major_level_to_abbr):
+                rank =  major_level_to_abbr[rank]
+
+            if sep == ';':
+                texts.append(f"{rank}__{name}")
+            else:
+                texts.append(f"{rank}|{taxID}|{name}")
+    
+    texts.reverse()
+
+    if space2underscore:
+        return sep.join(texts).replace(' ', '_')
+    else:
+        return sep.join(texts)
+
+def taxid2fullLinkDict( taxID ):
+    return _taxid2fullLink( taxID)
 
 def taxid2nearestMajorTaxid( taxID ):
     taxID = _checkTaxonomy( taxID )
     if taxID == "unknown": return "unknown"
     ptid = _getTaxParent( taxID )
     while ptid != '1':
-        tmp = taxid2rank( ptid )
+        tmp = _getTaxRank( ptid )
         if tmp in major_level_to_abbr:
             return ptid
         else:
@@ -283,53 +230,39 @@ def taxid2nearestMajorTaxid( taxID ):
 
     return "1"
 
-def taxid2lineage( tid, print_all_rank=True, print_strain=False, replace_space2underscore=True, output_type="auto"):
-    return _taxid2lineage( tid, print_all_rank, print_strain, replace_space2underscore, output_type)
-
-def taxid2lineageDICT( tid, print_all_rank=True, print_strain=False, replace_space2underscore=False, output_type="DICT" ):
-    return _taxid2lineage( tid, print_all_rank, print_strain, replace_space2underscore, output_type )
-
-def taxid2lineageTEXT( tid, print_all_rank=True, print_strain=False, replace_space2underscore=True, output_type="DICT"):
-    lineage = _taxid2lineage( tid, print_all_rank, print_strain, replace_space2underscore, output_type)
+def taxid2lineage( tid, all_major_rank=True, print_strain=False, space2underscore=False, sep="|"):
+    lineage = _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
     texts = []
     for rank in major_level_to_abbr:
         if rank in lineage:
-            texts.append( f"{major_level_to_abbr[rank]}__{lineage[rank]['name']}" ) 
+            if sep == ";":
+                texts.append( f"{major_level_to_abbr[rank]}__{lineage[rank]['name']}" )
+            else:
+                texts.append( f"{rank}|{lineage[rank]['taxid']}|{lineage[rank]['name']}" ) 
     
-    return ";".join(texts).replace(" ","_")
+    return sep.join(texts)    
 
-def _taxid2lineage(tid, print_all_rank, print_strain, replace_space2underscore, output_type):
+def taxid2lineageDICT( tid, all_major_rank=True, print_strain=False, space2underscore=False):
+    return _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
+
+def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
     taxID = _checkTaxonomy( tid )
-    if taxID == "unknown": return "unknown"
-
-    if output_type == "DICT":
-        if taxID in tidLineageDict: return tidLineageDict[taxID]
-    else:
-        if taxID in tidLineage: return tidLineage[taxID]
+    if taxID == "unknown": return {}
+    if taxID in tidLineageDict: return tidLineageDict[taxID]
 
     info = _autoVivification()
     lineage = []
+    level = {abbr: '' for abbr in abbr_to_major_level}
 
-    level = {
-        'sk' : '',
-        'p' : '',
-        'c' : '',
-        'o' : '',
-        'f' : '',
-        'g' : '',
-        's' : '',
-        'n' : ''
-    }
-
-    rank = taxid2rank(taxID)
+    rank = _getTaxRank(taxID)
     orig_rank = rank
     name = _getTaxName(taxID)
     str_name = name
-    if replace_space2underscore: str_name.replace(" ", "_")
+    if space2underscore: str_name = str_name.replace(" ", "_")
 
     while taxID:
         if rank in major_level_to_abbr:
-            if replace_space2underscore: name.replace(" ", "_")
+            if space2underscore: name = name.replace(" ", "_")
             level[major_level_to_abbr[rank]] = name
 
             #for output JSON
@@ -366,7 +299,7 @@ def _taxid2lineage(tid, print_all_rank, print_strain, replace_space2underscore, 
             idx = ranks.index( major_level_to_abbr[nmrank] )
 
     for lvl in ranks[idx:]:
-        if print_all_rank == 0:
+        if all_major_rank == False:
             if not level[lvl]: continue
 
         if not level[lvl]:
@@ -375,24 +308,14 @@ def _taxid2lineage(tid, print_all_rank, print_strain, replace_space2underscore, 
             info[abbr_to_major_level[lvl]]["taxid"] = 0
 
         last=level[lvl]
-        #lineage.append( "%s__%s"%(lvl, level[lvl]) )
-        lineage.append( level[lvl] )
-
-    lineage.reverse()
 
     if print_strain:
         if orig_rank == "strain":
-            #lineage.append( "n__%s"%(str_name) )
-            lineage.append( "%s"%(str_name) )
             info["strain"]["name"]  = str_name
             info["strain"]["taxid"] = tid
 
-    if output_type == "DICT":
-        tidLineageDict[tid] = info
-        return info
-    else:
-        tidLineage[tid] = "|".join(lineage)
-        return "|".join(lineage)
+    tidLineageDict[tid] = info
+    return info
 
 def _getTaxDepth( taxID ):
     return taxDepths[taxID]
@@ -435,6 +358,55 @@ def lca_taxid(taxids):
                 return ttid
 
     return '1'
+
+
+def acc2taxid( acc,  accession2taxid_file):
+    _checkTaxonomy()
+
+    if not accession2taxid_file:
+        accession2taxid_file = f"{taxonomy_dir}/accession2taxid.tsv"
+
+    #remove version number#
+    acc = acc.split('.')[0]
+
+    if not acc in accTid:
+        logging.info( f"acc2taxid from file: {accession2taxid_file}" )
+        with open( accession2taxid_file ) as f:
+            f.seek(0, 2)
+            start = 0
+            end = f.tell()
+            accCur = ""
+            
+            while( acc != accCur and start < end ):
+                posNew = (end+start)/2
+                f.seek( posNew )
+                if posNew != start: f.readline()
+                line = f.readline()    
+                
+                logging.info( "start: %15d, posNew: %15d, end: %15d, line: %s" % (start, posNew, end, line) )
+                if line :
+                    (accNew, tid) = line.split('\t')
+                else:
+                    break
+
+                if acc > accNew and accCur != accNew and accNew:
+                    if accNew: posNew = f.tell()
+                    start = posNew
+                    if start >= end: end = start+1
+                else:
+                    end = posNew
+                
+                accCur = accNew
+            f.close()
+
+            if accCur == acc:
+                accTid[acc] = tid.strip()
+            else:
+                accTid[acc] = ""
+    tid = _checkTaxonomy(accTid[acc])
+
+    return tid
+
 
 def loadTaxonomy( dbpath=None, 
                   cus_taxonomy_file=None, 
@@ -678,10 +650,6 @@ def loadTaxonomy( dbpath=None,
 
     logging.info( "Done parsing taxonomy files (%d taxons loaded)" % len(taxParents) )
 
-##########################
-##  Internal functions  ##
-##########################
-
 class _autoVivification(dict):
     """Implementation of perl's autovivification feature."""
     def __getitem__(self, item):
@@ -694,17 +662,20 @@ class _autoVivification(dict):
 def _die( msg ):
     sys.exit(msg)
 
-def _checkTaxonomy(taxID="", acc=""):
+def _checkTaxonomy(taxID):
     if not len(taxParents):
+        logging.fatal("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
         _die("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
 
-    taxID = str(taxID)
-
     if taxID:
+        # taxID must be in string type
+        taxID = str(taxID)
+
+        # convert to merged taxID first if needs
         if taxID in taxMerged:
             taxID = taxMerged[taxID]
 
-    if (taxID in taxNames) and (taxID in taxParents):
-        return taxID
-    else:
-        return "unknown"
+        if (taxID in taxNames) and (taxID in taxParents):
+            return taxID
+        else:
+            return "unknown"

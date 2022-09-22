@@ -42,30 +42,32 @@ Loading taxonomy information:
 
 Convert taxonomy id:
 
-- taxid2rank( taxID, guess_strain=True )
+- taxid2rank( [taxID], guess_strain=True )
     - for example: `taxid2rank( 2697049 )` -> `strain`
-- taxid2name( taxID )
+- taxid2name( [taxID] )
     - for example: `taxid2name( 2697049 )` -> `Severe acute respiratory syndrome coronavirus 2`
-- taxid2type( taxID )
+- taxid2type( [taxID] )
     - for example: `taxid2type( 2697049 )` -> `0`
-- taxid2parent( taxID )
+- taxid2parent( [taxID] )
     - for example: `taxid2parent( 2697049 )` -> `694009`
-- taxid2nameOnRank( taxID, r )
+- taxid2nameOnRank( [taxID], r )
     - for example: `taxid2nameOnRank( 2697049, 'genus')` -> `Betacoronavirus`
-- taxid2taxidOnRank( taxID, r )
+- taxid2taxidOnRank( [taxID], r )
     - for example: `taxid2taxidOnRank( 2697049, 'genus')` -> `694002`
-- taxidIsLeaf( taxID )
+- taxidIsLeaf( [taxID] )
     - for example: `taxidIsLeaf( 2697049 )` -> `True`
-- taxid2fullLineage( taxID )
-- taxid2fullLinkDict( taxID )
-- taxid2nearestMajorTaxid( taxID )
+- taxid2fullLineage( [taxID], sep=["|",";"], use_rank_abbr=False, space2underscore=True)
+    - for example: `taxid2fullLineage( 666 )` -> `no_rank|131567|cellular_organisms|superkingdom|2|Bacteria|phylum|1224|Proteobacteria|class|1236|Gammaproteobacteria|order|135623|Vibrionales|family|641|Vibrionaceae|genus|662|Vibrio|species|666|Vibrio_cholerae`
+    - for example: `taxid2fullLineage( 666, sep=';' )` -> `no_rank__cellular_organisms;superkingdom__Bacteria;phylum__Proteobacteria;class__Gammaproteobacteria;order__Vibrionales;family__Vibrionaceae;genus__Vibrio;species__Vibrio_cholerae`
+- taxid2fullLinkDict( [taxID] )
+    - for example: `taxid2fullLinkDict( 666 )` ->  {'662': '666', '641': '662', '135623': '641', '1236': '135623', '1224': '1236', '2': '1224', '131567': '2', '1': '131567'}
+- taxid2nearestMajorTaxid( [taxID] )
     - for example: `taxid2nearestMajorTaxid( 2697049 )` -> `694009`
-- taxid2lineage( taxID, print_all_rank=1, print_strain=0)
+- taxid2lineage( [taxID], all_major_rank=True, print_strain=False, space2underscore=False, sep="|"):
     - for example: `taxid2lineage( 2697049 )` -> `Viruses|Pisuviricota|Pisoniviricetes|Nidovirales|Coronaviridae|Betacoronavirus|Severe acute respiratory syndrome-related coronavirus|Severe acute respiratory syndrome coronavirus 2`
-- taxid2lineageDICT( taxID, print_all_rank=1, print_strain=0)
-    - for example: `taxid2lineageDICT( 2697049, 1, 1 )` -> `{'strain': {'name': 'Severe acute respiratory syndrome coronavirus 2', 'taxid': '2697049'}, 'species': {'name': 'Severe acute respiratory syndrome-related coronavirus', 'taxid': '694009'}, 'genus': {'name': 'Betacoronavirus', 'taxid': '694002'}, 'family': {'name': 'Coronaviridae', 'taxid': '11118'}, 'order': {'name': 'Nidovirales', 'taxid': '76804'}, 'class': {'name': 'Pisoniviricetes', 'taxid': '2732506'}, 'phylum': {'name': 'Pisuviricota', 'taxid': '2732408'}, 'superkingdom': {'name': 'Viruses', 'taxid': '10239'}}`
-- taxid2lineageTEXT( taxID, print_all_rank=1, print_strain=0)
-    - for example: `taxid2lineageTEXT( 2697049, 1, 1 )` -> `k__Viruses;p__Pisuviricota;c__Pisoniviricetes;o__Nidovirales;f__Coronaviridae;g__Betacoronavirus;s__Severe_acute_respiratory_syndrome-related_coronavirus;st__Severe_acute_respiratory_syndrome_coronavirus_2`
+    - for example: `taxid2lineageTEXT( 2697049, sep=';', print_strain=True )` -> `sk__Viruses;p__Pisuviricota;c__Pisoniviricetes;o__Nidovirales;f__Coronaviridae;g__Betacoronavirus;s__Severe_acute_respiratory_syndrome-related_coronavirus;n__Severe_acute_respiratory_syndrome_coronavirus_2`
+- taxid2lineageDICT( [taxID], all_major_rank=True, print_strain=False, space2underscore=False)
+    - for example: `taxid2lineageDICT( 2697049, print_strain=True )` -> `{'strain': {'name': 'Severe acute respiratory syndrome coronavirus 2', 'taxid': '2697049'}, 'species': {'name': 'Severe acute respiratory syndrome-related coronavirus', 'taxid': '694009'}, 'genus': {'name': 'Betacoronavirus', 'taxid': '694002'}, 'family': {'name': 'Coronaviridae', 'taxid': '11118'}, 'order': {'name': 'Nidovirales', 'taxid': '76804'}, 'class': {'name': 'Pisoniviricetes', 'taxid': '2732506'}, 'phylum': {'name': 'Pisuviricota', 'taxid': '2732408'}, 'superkingdom': {'name': 'Viruses', 'taxid': '10239'}}`
 
 Convert accession number:
 
