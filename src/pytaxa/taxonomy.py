@@ -360,10 +360,7 @@ def lca_taxid(taxids):
 
     return '1'
 
-
-def acc2taxid( acc,  accession2taxid_file):
-    _checkTaxonomy()
-
+def acc2taxid( acc,  accession2taxid_file=None):
     if not accession2taxid_file:
         accession2taxid_file = f"{taxonomy_dir}/accession2taxid.tsv"
 
@@ -404,18 +401,23 @@ def acc2taxid( acc,  accession2taxid_file):
                 accTid[acc] = tid.strip()
             else:
                 accTid[acc] = ""
-    tid = _checkTaxonomy(accTid[acc])
 
-    return tid
+    return accTid[acc]
 
+def loadTaxonomy(dbpath=None,
+                 cus_taxonomy_file=None, 
+                 cus_taxonomy_format="tsv",
+                 auto_download=True):
+    """ loadTaxonomy
+    Method to load taxonomy
 
-def loadTaxonomy( dbpath=None,
-                  cus_taxonomy_file=None, 
-                  cus_taxonomy_format="tsv",
-                  auto_download=True
-    ):
-    """
-    loadTaxonomy()
+    Arguments:
+    dbpath [STR] The path to search NCBI taxonomy files (default None)
+    cus_taxonomy_file [STR] The path of the custom taxonomy file (default None)
+    cus_taxonomy_format ['tsv','mgnify_lineage','gtdb_taxonomy','gtdb_metadata'] The format of the custom taxonomy file. (default 'tsv')
+    auto_download [BOOL] Download NCBI taxonomy files when local database not found. (default True)
+
+    Return: None
     """
     global taxonomy_dir
 
@@ -480,7 +482,6 @@ def loadTaxonomy( dbpath=None,
         logger.fatal( f"invalid cus_taxonomy_format: {cus_taxonomy_format}" )
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
 
-
 def _NCBITaxonomyDownload(taxonomy_dir):
     url = 'http://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz'
     logger.info( f"Auto downloading taxanomy from {url}..." )
@@ -531,7 +532,10 @@ def loadTaxonomyTSV(tsv_taxonomy_file):
     except IOError:
         _die( "Failed to open custom tsv taxonomy file: %s." % tsv_taxonomy_file )
 
-def loadNCBITaxonomy(taxdump_tgz_file, names_dmp_file, nodes_dmp_file, merged_dmp_file):
+def loadNCBITaxonomy(taxdump_tgz_file=None, 
+                     names_dmp_file=None, 
+                     nodes_dmp_file=None, 
+                     merged_dmp_file=None):
     # try to load taxonomy from taxonomy.tsv
     if os.path.isfile( nodes_dmp_file ) and  os.path.isfile( names_dmp_file ):
         try:

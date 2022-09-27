@@ -34,16 +34,16 @@ or, run as a standalone converter:
 $ pytaxa query -i 2697049
 ```
 
-## functionality
+## Functionality
 
 One of the following methods needs to be use to loading taxonomy information. Different methods can be used together to expand taxonomy. See [[Taxonomy information files](#taxonomy_info_files)] for supported formats.
 
 - `loadTaxonomy(dbpath=None, cus_taxonomy_file=None, cus_taxonomy_format='tsv', auto_download=True)`
     - This is the main method for taxonomy loading. It will use the other loading methods to load taxonomy depending on input arguments. If there is no local taxonomy, NCBI taxonomy will be downloaded automatically by default.
 - `loadTaxonomyTSV(tsv_taxonomy_file=[FILE])`
-- `loadNCBITaxonomy(taxdump_tgz_file, names_dmp_file, nodes_dmp_file, merged_dmp_file)`
+- `loadNCBITaxonomy(taxdump_tgz_file=[FILE], names_dmp_file, nodes_dmp_file, merged_dmp_file)`
 - `loadMgnifyTaxonomy(cus_taxonomy_file)`
-- `loadGTDBTaxonomy(cus_taxonomy_file, cus_taxonomy_format="gtdb_metadata")`
+- `loadGTDBTaxonomy(gtdb_taxonomy_file, gtdb_taxonomy_format="gtdb_metadata")`
 
 Convert taxonomy id:
 
@@ -168,7 +168,7 @@ The format of taxonomy.tsv (and taxonomy.custom.tsv) :
 
 #### Generating custom taxonomy
 
-Two formats, `tsv` and `lineage`, can be used to provide cutom taxonomy infomation and being loaded with `loadTaxonomy(cus_taxonomy_file=[PATH], cus_taxonomy_format=[FORMAT])`. There are a couple examples files in the `example
+Two formats, `tsv` and `lineage`, can be used to provide cutom taxonomy infomation and being loaded with `loadTaxonomy(cus_taxonomy_file=[PATH], cus_taxonomy_format=[FORMAT])`. There are a couple examples files in the `example/` directory.
 
 ##### `tsv` format
 
