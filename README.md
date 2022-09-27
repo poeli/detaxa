@@ -34,53 +34,67 @@ or, run as a standalone converter:
 $ pytaxa query -i 2697049
 ```
 
-## Overview of functions
+## functionality
 
 One of the following methods needs to be use to loading taxonomy information. Different methods can be used together to expand taxonomy. See [[Taxonomy information files](#taxonomy_info_files)] for supported formats.
 
-- loadTaxonomy(dbpath=None, cus_taxonomy_file=None, cus_taxonomy_format='tsv', auto_download=True)
+- `loadTaxonomy(dbpath=None, cus_taxonomy_file=None, cus_taxonomy_format='tsv', auto_download=True)`
     - This is the main method for taxonomy loading. It will use the other loading methods to load taxonomy depending on input arguments. If there is no local taxonomy, NCBI taxonomy will be downloaded automatically by default.
-- loadTaxonomyTSV(tsv_taxonomy_file=[FILE])
-- loadNCBITaxonomy(taxdump_tgz_file, names_dmp_file, nodes_dmp_file, merged_dmp_file)
-- loadMgnifyTaxonomy(cus_taxonomy_file)
-- loadGTDBTaxonomy(cus_taxonomy_file, cus_taxonomy_format="gtdb_metadata")
+- `loadTaxonomyTSV(tsv_taxonomy_file=[FILE])`
+- `loadNCBITaxonomy(taxdump_tgz_file, names_dmp_file, nodes_dmp_file, merged_dmp_file)`
+- `loadMgnifyTaxonomy(cus_taxonomy_file)`
+- `loadGTDBTaxonomy(cus_taxonomy_file, cus_taxonomy_format="gtdb_metadata")`
 
 Convert taxonomy id:
 
-- taxid2rank( [taxID], guess_strain=True )
-    - for example: `taxid2rank( 2697049 )` -> `strain`
-- taxid2name( [taxID] )
-    - for example: `taxid2name( 2697049 )` -> `Severe acute respiratory syndrome coronavirus 2`
-- taxid2type( [taxID] )
-    - for example: `taxid2type( 2697049 )` -> `0`
-- taxid2parent( [taxID] )
-    - for example: `taxid2parent( 2697049 )` -> `694009`
-- taxid2nameOnRank( [taxID], r )
-    - for example: `taxid2nameOnRank( 2697049, 'genus')` -> `Betacoronavirus`
-- taxid2taxidOnRank( [taxID], r )
-    - for example: `taxid2taxidOnRank( 2697049, 'genus')` -> `694002`
-- taxidIsLeaf( [taxID] )
-    - for example: `taxidIsLeaf( 2697049 )` -> `True`
-- taxid2fullLineage( [taxID], sep=["|",";"], use_rank_abbr=False, space2underscore=True)
-    - for example: `taxid2fullLineage( 666 )` -> `no_rank|131567|cellular_organisms|superkingdom|2|Bacteria|phylum|1224|Proteobacteria|class|1236|Gammaproteobacteria|order|135623|Vibrionales|family|641|Vibrionaceae|genus|662|Vibrio|species|666|Vibrio_cholerae`
-    - for example: `taxid2fullLineage( 666, sep=';' )` -> `no_rank__cellular_organisms;superkingdom__Bacteria;phylum__Proteobacteria;class__Gammaproteobacteria;order__Vibrionales;family__Vibrionaceae;genus__Vibrio;species__Vibrio_cholerae`
-- taxid2fullLinkDict( [taxID] )
-    - for example: `taxid2fullLinkDict( 666 )` ->  {'662': '666', '641': '662', '135623': '641', '1236': '135623', '1224': '1236', '2': '1224', '131567': '2', '1': '131567'}
-- taxid2nearestMajorTaxid( [taxID] )
-    - for example: `taxid2nearestMajorTaxid( 2697049 )` -> `694009`
-- taxid2lineage( [taxID], all_major_rank=True, print_strain=True, space2underscore=False, sep=["|",";"]):
-    - for example: `taxid2lineage( 2697049 )` -> `Viruses|Pisuviricota|Pisoniviricetes|Nidovirales|Coronaviridae|Betacoronavirus|Severe acute respiratory syndrome-related coronavirus|Severe acute respiratory syndrome coronavirus 2`
-    - for example: `taxid2lineageTEXT( 2697049, sep=';', print_strain=True )` -> `sk__Viruses;p__Pisuviricota;c__Pisoniviricetes;o__Nidovirales;f__Coronaviridae;g__Betacoronavirus;s__Severe_acute_respiratory_syndrome-related_coronavirus;n__Severe_acute_respiratory_syndrome_coronavirus_2`
-- taxid2lineageDICT( [taxID], all_major_rank=True, print_strain=False, space2underscore=False)
-    - for example: `taxid2lineageDICT( 2697049, print_strain=True )` -> `{'strain': {'name': 'Severe acute respiratory syndrome coronavirus 2', 'taxid': '2697049'}, 'species': {'name': 'Severe acute respiratory syndrome-related coronavirus', 'taxid': '694009'}, 'genus': {'name': 'Betacoronavirus', 'taxid': '694002'}, 'family': {'name': 'Coronaviridae', 'taxid': '11118'}, 'order': {'name': 'Nidovirales', 'taxid': '76804'}, 'class': {'name': 'Pisoniviricetes', 'taxid': '2732506'}, 'phylum': {'name': 'Pisuviricota', 'taxid': '2732408'}, 'superkingdom': {'name': 'Viruses', 'taxid': '10239'}}`
+- `taxid2rank( [taxID], guess_strain=True )`
+    - for example: taxid2rank( 2697049 )
+        - return: strain
+- `taxid2name( [taxID] )`
+    - for example: taxid2name( 2697049 )
+        - return: Severe acute respiratory syndrome coronavirus 2
+- `taxid2type( [taxID] )`
+    - for example: taxid2type( 2697049 )
+        - return: 0
+- `taxid2parent( [taxID] )`
+    - for example: taxid2parent( 2697049 )
+        - return: 694009
+- `taxid2nameOnRank( [taxID], r )`
+    - for example: taxid2nameOnRank( 2697049, 'genus')
+        - return: Betacoronavirus
+- `taxid2taxidOnRank( [taxID], r )`
+    - for example: taxid2taxidOnRank( 2697049, 'genus')
+        - return: 694002
+- `taxidIsLeaf( [taxID] )`
+    - for example: taxidIsLeaf( 2697049 )
+        - return: True
+- `taxid2fullLineage( [taxID], sep=["|",";"], use_rank_abbr=False, space2underscore=True)`
+    - for example: taxid2fullLineage( 666 )
+        - return: no_rank|131567|cellular_organisms|superkingdom|2|Bacteria|phylum|1224|Proteobacteria|class|1236|Gammaproteobacteria|order|135623|Vibrionales|family|641|Vibrionaceae|genus|662|Vibrio|species|666|Vibrio_cholerae
+    - for example: taxid2fullLineage( 666, sep=';' )
+        - return: no_rank__cellular_organisms;superkingdom__Bacteria;phylum__Proteobacteria;class__Gammaproteobacteria;order__Vibrionales;family__Vibrionaceae;genus__Vibrio;species__Vibrio_cholerae
+- `taxid2fullLinkDict( [taxID] )`
+    - for example: taxid2fullLinkDict( 666 )
+        - return: {'662': '666', '641': '662', '135623': '641', '1236': '135623', '1224': '1236', '2': '1224', '131567': '2', '1': '131567'}
+- `taxid2nearestMajorTaxid( [taxID] )`
+    - for example: taxid2nearestMajorTaxid( 2697049 )
+        - return: 694009
+- `taxid2lineage( [taxID], all_major_rank=True, print_strain=True, space2underscore=False, sep=["|",";"])`
+    - for example: taxid2lineage( 2697049 )
+        - return: Viruses|Pisuviricota|Pisoniviricetes|Nidovirales|Coronaviridae|Betacoronavirus|Severe acute respiratory syndrome-related coronavirus|Severe acute respiratory syndrome coronavirus 2
+    - for example: taxid2lineageTEXT( 2697049, sep=';', print_strain=True )
+        - return: sk__Viruses;p__Pisuviricota;c__Pisoniviricetes;o__Nidovirales;f__Coronaviridae;g__Betacoronavirus;s__Severe_acute_respiratory_syndrome-related_coronavirus;n__Severe_acute_respiratory_syndrome_coronavirus_2
+- `taxid2lineageDICT( [taxID], all_major_rank=True, print_strain=False, space2underscore=False)`
+    - for example: taxid2lineageDICT( 2697049, print_strain=True )
+        - return: {'strain': {'name': 'Severe acute respiratory syndrome coronavirus 2', 'taxid': '2697049'}, 'species': {'name': 'Severe acute respiratory syndrome-related coronavirus', 'taxid': '694009'}, 'genus': {'name': 'Betacoronavirus', 'taxid': '694002'}, 'family': {'name': 'Coronaviridae', 'taxid': '11118'}, 'order': {'name': 'Nidovirales', 'taxid': '76804'}, 'class': {'name': 'Pisoniviricetes', 'taxid': '2732506'}, 'phylum': {'name': 'Pisuviricota', 'taxid': '2732408'}, 'superkingdom': {'name': 'Viruses', 'taxid': '10239'}}
 
 Convert accession number:
 
-- acc2taxid( acc )
+- `acc2taxid( acc )`
 
 Convert taxa to taonxomy id:
 
-- name2taxid( name )
+- `name2taxid( name )`
 
 
 ## Taxonomy information files <a name="taxonomy_info_files"></a>
@@ -98,11 +112,18 @@ PyTaxa takes various taxonomy files. If the path of the taxonomy directory isn't
         - taxonomy.tsv
         - taxonomy.custom.tsv (optional; for custom taxonomies)
         - taxonomy.merged.tsv (optional; for merged taxonomic nodes)
+    - Example file can be find in `example/taxonomy.custom.tsv`
 
-4. Full lineages provided in plan text:
+4. EBI MGnigy lineages:
     - See [[custom taxonomy > lineage format](#lineage_format)] for details
+    - Example file can be find in `example/mgnify_lineage.txt`
 
-5. (optional) Mapping table of accession number to taxid in TSV format
+5. GTDB taxonomy and metadata tsv (plain text only):
+    - GTDB taxonomy tar.gz file [[link](https://data.gtdb.ecogenomic.org/releases/latest/bac120_taxonomy.tar.gz)]
+    - GTDB metadata tar.gz file [[link](https://data.gtdb.ecogenomic.org/releases/latest/bac120_metadata.tar.gz)]
+    - Example file can be find in `example/bac120_*_r207.tsv`
+
+6. (optional) Mapping table of accession number to taxid in TSV format
     - accession2taxid.tsv (requirement for function `acc2taxid()`)
 
 
