@@ -5,15 +5,9 @@ from . import taxonomy as t
 from . import __version__
 import click
 
-@click.group(help=f"""PyTaxa taxonomy utility v{t.__version__}.""")
+@click.group(help=f"""PyTaxa taxonomy utility v{__version__}.""")
 def pytaxacli():
     pass
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M',
-)
 
 @pytaxacli.command('query')
 @click.option('-i', '--id',
@@ -31,13 +25,29 @@ logging.basicConfig(
               default=None,
               type=str)
 @click.option('-f', '--custom-fmt',
-              help='custom taxonomy format "tsv" or "lineage"',
+              help="custom taxonomy format 'tsv', 'lineage', 'gtdb_taxonomy' and 'gtdb_metadata'",
               required=False,
               default='tsv',
-              type=str)
+              type=click.Choice(['tsv', 'lineage', 'gtdb_taxonomy', 'gtdb_metadata'], case_sensitive=False)
+              )
+@click.option('--debug',
+              help='debug mode',
+              is_flag=True,
+              default=False)
 
-def query(id, database, custom_taxa, custom_fmt):
-    t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+def query(id, database, custom_taxa, custom_fmt, debug):
+    if debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M',
+        )
+
+    if custom_fmt.startswith('gtdb'):
+        t.loadGTDBTaxonomy(cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+    else:
+        t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+
     taxid = id
 
     if taxid:
@@ -58,6 +68,48 @@ def query(id, database, custom_taxa, custom_fmt):
         print( "taxid2fullLinkDict( %s )         => %s" % (taxid, t.taxid2fullLinkDict(taxid)) )
     else:
         print( "No taxid found." )
+
+
+@pytaxacli.command('query_name')
+@click.option('-n', '--name',
+              help='a taxonomy name',
+              required=True,
+              type=str)
+@click.option('-d', '--database',
+              help='path of taxonomy_db/',
+              required=False,
+              default=None,
+              type=str)
+@click.option('-c', '--custom-taxa',
+              help='path of custom taxonomy file',
+              required=False,
+              default=None,
+              type=str)
+@click.option('-f', '--custom-fmt',
+              help="custom taxonomy format 'tsv', 'lineage', 'gtdb_taxonomy' and 'gtdb_metadata'",
+              required=False,
+              default='tsv',
+              type=click.Choice(['tsv', 'lineage', 'gtdb_taxonomy', 'gtdb_metadata'], case_sensitive=False)
+              )
+@click.option('--debug',
+              help='debug mode',
+              is_flag=True,
+              default=False)
+
+def query_name(name, database, custom_taxa, custom_fmt, debug):
+    if debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M',
+        )
+    
+    if custom_fmt.startswith('gtdb'):
+        t.loadGTDBTaxonomy(cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+    else:
+        t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+ 
+    print(t.name2taxid(name))
 
 if __name__ == '__main__':
     pytaxacli()
