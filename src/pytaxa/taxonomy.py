@@ -381,12 +381,13 @@ def acc2taxid( acc,  accession2taxid_file=None):
                 if posNew != start: f.readline()
                 line = f.readline()    
                 
-                logger.info( "start: %15d, posNew: %15d, end: %15d, line: %s" % (start, posNew, end, line) )
+                logger.debug( "start: %15d, posNew: %15d, end: %15d, line: %s" % (start, posNew, end, line) )
                 if line :
                     (accNew, tid) = line.split('\t')
                 else:
                     break
 
+                logger.debug( f'[acc, accNew, accCur]=[{acc}, {accNew}, {accCur}]')
                 if acc > accNew and accCur != accNew and accNew:
                     if accNew: posNew = f.tell()
                     start = posNew
