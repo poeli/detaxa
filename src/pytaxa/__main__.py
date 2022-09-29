@@ -9,11 +9,8 @@ import click
 def pytaxacli():
     pass
 
-@pytaxacli.command('query')
-@click.option('-i', '--id',
-              help='a taxonomy id or accession# (if available)',
-              required=True,
-              type=str)
+@pytaxacli.command()
+@click.argument('taxid', required=True, type=str)
 @click.option('-d', '--database',
               help='path of taxonomy_db/',
               required=False,
@@ -35,7 +32,7 @@ def pytaxacli():
               is_flag=True,
               default=False)
 
-def query(id, database, custom_taxa, custom_fmt, debug):
+def taxid(taxid, database, custom_taxa, custom_fmt, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -47,8 +44,6 @@ def query(id, database, custom_taxa, custom_fmt, debug):
         t.loadGTDBTaxonomy(cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
     else:
         t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
-
-    taxid = id
 
     if taxid:
         print( "taxid2name( %s )                 => %s" % (taxid, t.taxid2name(taxid)) )
@@ -70,11 +65,8 @@ def query(id, database, custom_taxa, custom_fmt, debug):
         print( "No taxid found." )
 
 
-@pytaxacli.command('query_name')
-@click.option('-n', '--name',
-              help='a taxonomy name',
-              required=True,
-              type=str)
+@pytaxacli.command()
+@click.argument('name', required=True, type=str)
 @click.option('-d', '--database',
               help='path of taxonomy_db/',
               required=False,
@@ -96,7 +88,7 @@ def query(id, database, custom_taxa, custom_fmt, debug):
               is_flag=True,
               default=False)
 
-def query_name(name, database, custom_taxa, custom_fmt, debug):
+def name2tid(name, database, custom_taxa, custom_fmt, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -110,6 +102,27 @@ def query_name(name, database, custom_taxa, custom_fmt, debug):
         t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
  
     print(t.name2taxid(name))
+
+@pytaxacli.command()
+@click.argument('accession', required=True, type=str)
+@click.option('-m', '--mapping',
+              help='path of mapping table',
+              required=False,
+              default=None,
+              type=str)
+@click.option('--debug',
+              help='debug mode',
+              is_flag=True,
+              default=False)
+def acc2taxid(accession, mapping_tsv, debug):
+    if debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M',
+        )
+
+    print(t.acc2taxid(accession, mapping_tsv))
 
 if __name__ == '__main__':
     pytaxacli()
