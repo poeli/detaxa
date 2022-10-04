@@ -1,0 +1,10 @@
+{
+    "superkingdom" : "sk",
+    "phylum"       : "p",
+    "class"        : "c",
+    "order"        : "o",
+    "family"       : "f",
+    "genus"        : "g",
+    "species"      : "s",
+    "strain"       : "n"
+}

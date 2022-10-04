@@ -4,6 +4,7 @@
 # B-11, Los Alamos National Lab
 # Date: 05/15/2016
 
+import imp
 import sys
 import os
 import tarfile
@@ -12,16 +13,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Set default path of taxonomy_db/:
+# Set default path of `taxonomy_db/` and `major_level_to_abbr.json`:
 # The default `taxonomy_db/` path is your the location
 lib_path = os.path.dirname(os.path.realpath(__file__))
-taxonomy_dir = lib_path + "/taxonomy_db"
+taxonomy_dir = f"{lib_path}/taxonomy_db"
+abbr_json_path = f"{taxonomy_dir}/major_level_to_abbr.json"
 
 if os.path.isdir( "./taxonomy_db" ):
     taxonomy_dir = "./taxonomy_db"
+    # if there is a new `major_level_to_abbr.json` in in the taxonomy_dir, use the json file.
+    # Otherwise, use the default one comes with this package
+    if os.path.isfile( f"{taxonomy_dir}/major_level_to_abbr.json" ):
+        abbr_json_path = f"{taxonomy_dir}/major_level_to_abbr.json"
+    else:
+        pass
 elif os.path.isdir( os.getcwd()+"/taxonomy_db" ):
     taxonomy_dir = os.getcwd()+"/taxonomy_db"
 
+# init global dir
 taxDepths      = {}
 taxParents     = {}
 taxRanks       = {}
@@ -32,26 +41,8 @@ accTid         = {}
 tidLineage     = {}
 tidLineageDict = {}
 
-major_level_to_abbr = {
-    'superkingdom' : 'sk',
-    'phylum'       : 'p',
-    'class'        : 'c',
-    'order'        : 'o',
-    'family'       : 'f',
-    'genus'        : 'g',
-    'species'      : 's',
-    'strain'       : 'n',
-}
-abbr_to_major_level = {
-    'sk'           : 'superkingdom',
-    'p'            : 'phylum',
-    'c'            : 'class',
-    'o'            : 'order',
-    'f'            : 'family',
-    'g'            : 'genus',
-    's'            : 'species',
-    'n'            : 'strain',
-}
+major_level_to_abbr = {}
+abbr_to_major_level = {}
 
 
 def taxid2rank( taxID, guess_strain=True ):
@@ -285,7 +276,8 @@ def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
 
     last = str_name
 
-    ranks = ['n','s','g','f','o','c','p','sk']
+    ranks = list(abbr_to_major_level.keys())
+    ranks.reverse()
     idx = 0
     
     # input taxid is a major rank
@@ -420,12 +412,15 @@ def loadTaxonomy(dbpath=None,
 
     Return: None
     """
-    global taxonomy_dir
-
+    global taxonomy_dir, abbr_json_path
+    
     if dbpath:
         taxonomy_dir = dbpath
 
     logger.debug( f"Taxonomy directory: {taxonomy_dir}" )
+
+    # loading major levels to json file
+    _loadAbbrJson(abbr_json_path)
 
     #NCBI ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz
     taxdump_tgz_file = taxonomy_dir+"/taxdump.tar.gz"
@@ -483,7 +478,33 @@ def loadTaxonomy(dbpath=None,
         logger.fatal( f"invalid cus_taxonomy_format: {cus_taxonomy_format}" )
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
 
-def _NCBITaxonomyDownload(taxonomy_dir):
+
+def _loadAbbrJson(abbr_json_path, type=None):
+    import json
+    global major_level_to_abbr, abbr_to_major_level
+
+    # Opening JSON file
+    with open(abbr_json_path) as f:    
+        major_level_to_abbr = json.load(f)
+        f.close
+
+    if len(major_level_to_abbr):
+        if type=="gtdb":
+            major_level_to_abbr['superkingdom'] = 'd'
+            major_level_to_abbr['strain'] = 'x'
+        abbr_to_major_level = {v: k for k, v in major_level_to_abbr.items()}
+    else:
+        logger.fatal( f"None of the major level to aberration loaded from {abbr_json_path}." )
+        _die(f"[ERROR] None of the major level to aberration loaded from {abbr_json_path}.")
+
+
+def NCBITaxonomyDownload(dir=None):
+    global taxonomy_dir
+
+    if not dir:
+        dir = taxonomy_dir
+        logger.info( f"No destination taxonomy dir input. Use default: {dir}..." )
+
     url = 'http://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz'
     logger.info( f"Auto downloading taxanomy from {url}..." )
     # download taxonomy file if auto_download enabled
@@ -514,6 +535,10 @@ def _NCBITaxonomyDownload(taxonomy_dir):
     os.remove(taxdump_tgz_file)
 
 def loadTaxonomyTSV(tsv_taxonomy_file):
+
+    # loading major levels to json file
+    _loadAbbrJson(abbr_json_path)
+
     try:
         with open(tsv_taxonomy_file) as f:
             for line in f:
@@ -537,6 +562,10 @@ def loadNCBITaxonomy(taxdump_tgz_file=None,
                      names_dmp_file=None, 
                      nodes_dmp_file=None, 
                      merged_dmp_file=None):
+
+    # loading major levels to json file
+    _loadAbbrJson(abbr_json_path)
+
     # try to load taxonomy from taxonomy.tsv
     if os.path.isfile( nodes_dmp_file ) and  os.path.isfile( names_dmp_file ):
         try:
@@ -629,6 +658,9 @@ def loadMgnifyTaxonomy(mgnify_taxonomy_file=None):
     loadMgnifyTaxonomy()
     """
 
+    # loading major levels to json file
+    _loadAbbrJson(abbr_json_path, type="mgnify")
+
     # try to load custom taxonomy from lineage file
     if os.path.isfile(mgnify_taxonomy_file):
         logger.info( "Open custom taxonomy node file (lineage format): %s"% mgnify_taxonomy_file)
@@ -694,6 +726,9 @@ def loadGTDBTaxonomy(gtdb_taxonomy_file=None, gtdb_taxonomy_format="gtdb_metadat
     loadGTDBTaxonomy()
     """
 
+    # loading major levels to json file
+    _loadAbbrJson(abbr_json_path, type='gtdb')
+
     # try to load custom taxonomy from GTDB file
     if os.path.isfile(gtdb_taxonomy_file) and (gtdb_taxonomy_format in ['gtdb_taxonomy','gtdb_metadata']):
         logger.info( f"Open custom taxonomy node file ({gtdb_taxonomy_format}): %s"% gtdb_taxonomy_file)
@@ -752,11 +787,7 @@ def loadGTDBTaxonomy(gtdb_taxonomy_file=None, gtdb_taxonomy_format="gtdb_metadat
                             if not '1' in taxRanks: taxRanks['1'] = 'root'
                             if not '1' in taxNames: taxNames['1'] = 'root'
 
-                        if rank_abbr=='d':
-                            rank = 'superkingdom'
-                        elif rank_abbr=='x':
-                            rank = 'strain'
-                        elif rank_abbr in abbr_to_major_level:
+                        if rank_abbr in abbr_to_major_level:
                             rank = abbr_to_major_level[rank_abbr]
                         else:
                             rank = rank_abbr

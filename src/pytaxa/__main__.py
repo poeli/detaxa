@@ -6,10 +6,10 @@ from . import __version__
 import click
 
 @click.group(help=f"""PyTaxa taxonomy utility v{__version__}.""")
-def pytaxacli():
+def cli():
     pass
 
-@pytaxacli.command()
+@cli.command()
 @click.argument('taxid', required=True, type=str)
 @click.option('-d', '--database',
               help='path of taxonomy_db/',
@@ -65,7 +65,7 @@ def taxid(taxid, database, custom_taxa, custom_fmt, debug):
         print( "No taxid found." )
 
 
-@pytaxacli.command()
+@cli.command()
 @click.argument('name', required=True, type=str)
 @click.option('-d', '--database',
               help='path of taxonomy_db/',
@@ -103,7 +103,7 @@ def name2tid(name, database, custom_taxa, custom_fmt, debug):
  
     print(t.name2taxid(name))
 
-@pytaxacli.command()
+@cli.command()
 @click.argument('accession', required=True, type=str)
 @click.option('-m', '--mapping',
               help='path of mapping table',
@@ -124,5 +124,32 @@ def acc2taxid(accession, mapping_tsv, debug):
 
     print(t.acc2taxid(accession, mapping_tsv))
 
+@cli.command()
+@click.option('-d', '--database',
+              help='path of taxonomy_db/',
+              required=False,
+              default=None,
+              type=str)
+@click.option('--debug',
+              help='debug mode',
+              is_flag=True,
+              default=False)
+
+def update(database, debug):
+    if debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M',
+        )
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M',
+        )
+    t.NCBITaxonomyDownload(database)
+
+
 if __name__ == '__main__':
-    pytaxacli()
+    cli()

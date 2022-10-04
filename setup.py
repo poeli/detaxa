@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import sys
 
 from src.pytaxa import __version__ as ptv
 
@@ -15,16 +14,16 @@ setup(
     url='https://github.com/poeli/taxonomy',
     license='LICENSE',
     packages=['pytaxa'],
-    # packages=find_packages('src'),
-    package_dir={'': 'src'},
-    package_data={'pytaxa.taxonomy_db':['*']},
+    # packages=find_packages(include=['pytaxa', 'pytaxa.*']),
     include_package_data=True,
+    package_dir={'': 'src'},
+    package_data={'pytaxa':['taxonomy_db/*.json']},
     description='NCBI taxonomy and lineage lookup',
     keywords=["taxonomy"],
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
     entry_points={ 
-        'console_scripts': ['pytaxa = pytaxa.__main__:pytaxacli' ] 
+        'console_scripts': ['pytaxa = pytaxa.__main__:cli' ] 
     },
     install_requires=INSTALL_REQUIRES,
     classifiers=[
