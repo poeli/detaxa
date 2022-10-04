@@ -479,7 +479,7 @@ def loadTaxonomy(dbpath=None,
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
 
 
-def _loadAbbrJson(abbr_json_path, type=None):
+def _loadAbbrJson(abbr_json_path):
     import json
     global major_level_to_abbr, abbr_to_major_level
 
@@ -489,9 +489,6 @@ def _loadAbbrJson(abbr_json_path, type=None):
         f.close
 
     if len(major_level_to_abbr):
-        if type=="gtdb":
-            major_level_to_abbr['superkingdom'] = 'd'
-            major_level_to_abbr['strain'] = 'x'
         abbr_to_major_level = {v: k for k, v in major_level_to_abbr.items()}
     else:
         logger.fatal( f"None of the major level to aberration loaded from {abbr_json_path}." )
@@ -659,7 +656,7 @@ def loadMgnifyTaxonomy(mgnify_taxonomy_file=None):
     """
 
     # loading major levels to json file
-    _loadAbbrJson(abbr_json_path, type="mgnify")
+    _loadAbbrJson(abbr_json_path)
 
     # try to load custom taxonomy from lineage file
     if os.path.isfile(mgnify_taxonomy_file):
@@ -787,6 +784,10 @@ def loadGTDBTaxonomy(gtdb_taxonomy_file=None, gtdb_taxonomy_format="gtdb_metadat
                             if not '1' in taxRanks: taxRanks['1'] = 'root'
                             if not '1' in taxNames: taxNames['1'] = 'root'
 
+                        if rank_abbr=='d':
+                            rank = 'superkingdom'
+                        elif rank_abbr=='x':
+                            rank = 'strain'
                         if rank_abbr in abbr_to_major_level:
                             rank = abbr_to_major_level[rank_abbr]
                         else:

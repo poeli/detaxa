@@ -96,7 +96,6 @@ Convert taxa to taonxomy id:
 
 - `name2taxid( name )`
 
-
 ## Taxonomy information files <a name="taxonomy_info_files"></a>
 
 PyTaxa takes various taxonomy files. If the path of the taxonomy directory isn't provided, it will use `taxonomy_db/` as the default path and search for following files at the taxonomy directory:
@@ -204,7 +203,7 @@ The `lineage` format provided the full lineage of a taxa in one linear. The node
 sk__Bacteria;p__Bacteroidetes;c__Bacteroidia;o__Bacteroidales;f__Prevotellaceae;g__Massiliprevotella;s__Massiliprevotella_massiliensis
 ```
 
-PyTaxa will automatically convert following abbreviations to the full name of rank. Note that these ranks are defined as major ranks but PyTaxa allows custom ranks as well.
+PyTaxa will automatically convert following abbreviations to the full name of rank. These ranks are defined as major ranks but PyTaxa allows all ranks inclusing user defined ranks. Note that major ranks can be modified -- see [[here]](#levels_and_abbr)] for details.
 
 | Abbr   | Ranks           | 
 |--------|-----------------| 
@@ -229,3 +228,7 @@ perl -pe 's/\s+\|//g' ../taxonomy/merged.dmp > taxonomy.merged.tsv
 zcat ../taxonomy/accession2taxid/*nucl*.gz | cut -f 2,3 | sed 's/\.[[:digit:]]*//' | LC_ALL=C sort > accession2taxid.nucl.tsv
 ln -s accession2taxid.nucl.tsv accession2taxid.tsv
 ```
+
+## Customizing major levels and abbreviations <a name="levels_and_abbr"></a>
+
+The default major ranks and their abbreviations are defined in JSON format `taxonomy_db/major_level_to_abbr.json`. User can make their own modification or add their own rank-abbreviation pairs.
