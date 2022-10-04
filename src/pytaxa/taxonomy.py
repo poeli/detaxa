@@ -447,7 +447,7 @@ def loadTaxonomy(dbpath=None,
         
         logger.info( f"No taxonomy files not found." )
         if auto_download:
-            _NCBITaxonomyDownload(taxonomy_dir)
+            NCBITaxonomyDownload(taxonomy_dir)
         else:
             logger.info( f"Auto-download is off." )
             logger.fatal( f"No available taxonomy files." )
