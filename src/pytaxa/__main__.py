@@ -83,12 +83,23 @@ def taxid(taxid, database, custom_taxa, custom_fmt, debug):
               default='tsv',
               type=click.Choice(['tsv', 'lineage', 'gtdb_taxonomy', 'gtdb_metadata'], case_sensitive=False)
               )
+@click.option('-r', '--rank',
+              help="rank of the input taxa",
+              required=False,
+              default=None,
+              type=str
+              )
+@click.option('-p', '--partial',
+              help="partial match of input taxa, default is False",
+              is_flag=True,
+              default=False
+              )
 @click.option('--debug',
               help='debug mode',
               is_flag=True,
               default=False)
 
-def name2tid(name, database, custom_taxa, custom_fmt, debug):
+def name2tid(name, database, custom_taxa, custom_fmt, rank, partial, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -101,7 +112,7 @@ def name2tid(name, database, custom_taxa, custom_fmt, debug):
     else:
         t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
  
-    print(t.name2taxid(name))
+    print(t.name2taxid(name, rank, partial))
 
 @cli.command()
 @click.argument('accession', required=True, type=str)

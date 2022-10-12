@@ -46,7 +46,7 @@ abbr_to_major_level = {}
 
 
 def taxid2rank( taxID, guess_strain=True ):
-    taxID = _checkTaxonomy( taxID )
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
 
     if taxID == '1':
@@ -67,22 +67,22 @@ def taxid2rank( taxID, guess_strain=True ):
     
     return taxRanks[taxID]
 
-def taxid2name( taxID ):
-    taxID = _checkTaxonomy( taxID )
+def taxid2name(taxID):
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown":
         return "unknown"
     else:
         return _getTaxName(taxID)
 
-def taxid2depth( taxID ):
-    taxID = _checkTaxonomy( taxID )
+def taxid2depth(taxID):
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown":
         return "unknown"
     else:
         return _getTaxDepth(taxID)
 
-def taxid2type( taxID ):
-    taxID = _checkTaxonomy( taxID )
+def taxid2type(taxID):
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
 
     origID = taxID
@@ -101,8 +101,8 @@ def taxid2type( taxID ):
 
     return taxID
 
-def taxid2parent( taxID ):
-    taxID = _checkTaxonomy( taxID )
+def taxid2parent(taxID):
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
 
     taxID = taxParents[taxID]
@@ -111,11 +111,26 @@ def taxid2parent( taxID ):
 
     return taxID
 
-def name2taxid( name ):
-    return [key for key in taxNames if name == taxNames[key]]
+def name2taxid(name, rank=None, partial_match=False):
+    matched_taxid = []
+    for taxid in taxNames:
+        if partial_match==True:
+            if not name in taxNames[taxid]:
+                continue
+        else:
+            if name!=taxNames[taxid]:
+                continue
+        
+        if rank:
+            if _getTaxRank(taxid)==rank:
+                matched_taxid.append(taxid)
+        else:
+            matched_taxid.append(taxid)
+
+    return matched_taxid
 
 def taxid2nameOnRank( taxID, target_rank=None ):
-    taxID = _checkTaxonomy( taxID )
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
 
     if taxID == 1: return "root"
@@ -137,7 +152,7 @@ def taxid2nameOnRank( taxID, target_rank=None ):
     return ""
 
 def taxid2taxidOnRank( taxID, target_rank=None ):
-    taxID = _checkTaxonomy( taxID )
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
 
     rank = _getTaxRank(taxID)
@@ -156,8 +171,8 @@ def taxid2taxidOnRank( taxID, target_rank=None ):
 
     return ""
 
-def taxidIsLeaf( taxID ):
-    taxID = _checkTaxonomy( taxID )
+def taxidIsLeaf(taxID):
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return False
     if not taxID in taxNumChilds:
         return True
@@ -165,7 +180,7 @@ def taxidIsLeaf( taxID ):
         return False
 
 def _taxid2fullLink(taxID):
-    taxID = _checkTaxonomy( taxID )
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return {}
     link = _autoVivification()
 
@@ -203,13 +218,13 @@ def taxid2fullLineage( taxID, sep='|', use_rank_abbr=False, space2underscore=Tru
     else:
         return sep.join(texts)
 
-def taxid2fullLinkDict( taxID ):
+def taxid2fullLinkDict(taxID):
     return _taxid2fullLink( taxID)
 
-def taxid2nearestMajorTaxid( taxID ):
-    taxID = _checkTaxonomy( taxID )
+def taxid2nearestMajorTaxid(taxID):
+    taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
-    ptid = _getTaxParent( taxID )
+    ptid = _getTaxParent(taxID)
     while ptid != '1':
         tmp = _getTaxRank( ptid )
         if tmp in major_level_to_abbr:
@@ -310,16 +325,16 @@ def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
     tidLineageDict[tid] = info
     return info
 
-def _getTaxDepth( taxID ):
+def _getTaxDepth(taxID):
     return taxDepths[taxID]
 
-def _getTaxName( taxID ):
+def _getTaxName(taxID):
     return taxNames[taxID]
 
-def _getTaxParent( taxID ):
+def _getTaxParent(taxID):
     return taxParents[taxID]
 
-def _getTaxRank( taxID ):
+def _getTaxRank(taxID):
     return taxRanks[taxID]
 
 def lca_taxid(taxids):

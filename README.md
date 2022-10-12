@@ -94,7 +94,7 @@ Convert accession number:
 
 Convert taxa to taonxomy id:
 
-- `name2taxid( name )`
+- `name2taxid( name, rank=None, partial_match=False )`
 
 ## Taxonomy information files <a name="taxonomy_info_files"></a>
 
@@ -231,4 +231,4 @@ ln -s accession2taxid.nucl.tsv accession2taxid.tsv
 
 ## Customizing major levels and abbreviations <a name="levels_and_abbr"></a>
 
-The default major ranks and their abbreviations are defined in JSON format `taxonomy_db/major_level_to_abbr.json`. User can make their own modification or add their own rank-abbreviation pairs.
+For additional flexibility, a custom major rank-abbreviations mapping data file can be provided. The default major ranks and their abbreviations are defined in JSON format `taxonomy_db/major_level_to_abbr.json`. User can make their own modification or add their own rank-abbreviation pairs.
