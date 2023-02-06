@@ -346,15 +346,19 @@ def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
     return info
 
 def _getTaxDepth(taxID):
+    if taxID in taxMerged: taxID = taxMerged[taxID]
     return taxDepths[taxID]
 
 def _getTaxName(taxID):
+    if taxID in taxMerged: taxID = taxMerged[taxID]
     return taxNames[taxID]
 
 def _getTaxParent(taxID):
+    if taxID in taxMerged: taxID = taxMerged[taxID]
     return taxParents[taxID]
 
 def _getTaxRank(taxID):
+    if taxID in taxMerged: taxID = taxMerged[taxID]
     return taxRanks[taxID]
 
 def lca_taxid(taxids):
