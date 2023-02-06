@@ -112,7 +112,15 @@ def taxid2parent(taxID):
 
     return taxID
 
-def name2taxid(name, rank=None, partial_match=False):
+def name2taxid(name, rank=None, partial_match=False, method='all', reset=False):
+    """
+    name2taxid: convert organism name to taxid
+    """
+    global nameTid
+
+    # reset previous mapping results
+    if reset:
+        nameTid = {}
     
     if not name in nameTid:
         matched_taxid = []
@@ -129,6 +137,11 @@ def name2taxid(name, rank=None, partial_match=False):
                     matched_taxid.append(taxid)
             else:
                 matched_taxid.append(taxid)
+
+            # return when the first match found
+            if method=='first' and len(matched_taxid):
+                nameTid[name] = matched_taxid
+                return nameTid[name]
         
         nameTid[name] = matched_taxid
         return nameTid[name]
@@ -138,44 +151,45 @@ def name2taxid(name, rank=None, partial_match=False):
 def taxid2nameOnRank( taxID, target_rank=None ):
     taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
-
     if taxID == 1: return "root"
     if target_rank == "root": return "root"
 
-    rank = _getTaxRank(taxID)
-    name = _getTaxName(taxID)
-
-    if target_rank == "strain" and taxidIsLeaf(taxID):
-        return name
-
-    while taxID:
-        if rank.upper() == target_rank.upper(): return name
-        if name == 'root': break
-        taxID = _getTaxParent(taxID)
+    if taxID:
         rank = _getTaxRank(taxID)
         name = _getTaxName(taxID)
 
-    return ""
+        if target_rank == "strain" and taxidIsLeaf(taxID):
+            return name
+
+        while taxID:
+            if rank.upper() == target_rank.upper(): return name
+            if name == 'root': break
+            taxID = _getTaxParent(taxID)
+            rank = _getTaxRank(taxID)
+            name = _getTaxName(taxID)
+    else:
+        return ""
 
 def taxid2taxidOnRank( taxID, target_rank=None ):
     taxID = _checkTaxonomy(taxID)
     if taxID == "unknown": return "unknown"
 
-    rank = _getTaxRank(taxID)
-    name = _getTaxName(taxID)
-
-    if target_rank == rank or ( target_rank == 'strain' and rank == 'no rank'): return taxID
-    if target_rank == "root": return 1
-
-    while taxID:
-        if rank.upper() == target_rank.upper(): return taxID
-        if name == 'root': break
-
-        taxID = _getTaxParent(taxID)
+    if taxID:
         rank = _getTaxRank(taxID)
         name = _getTaxName(taxID)
 
-    return ""
+        if target_rank == rank or ( target_rank == 'strain' and rank == 'no rank'): return taxID
+        if target_rank == "root": return 1
+
+        while taxID:
+            if rank.upper() == target_rank.upper(): return taxID
+            if name == 'root': break
+
+            taxID = _getTaxParent(taxID)
+            rank = _getTaxRank(taxID)
+            name = _getTaxName(taxID)
+    else:
+        return ""
 
 def taxidIsLeaf(taxID):
     taxID = _checkTaxonomy(taxID)
@@ -852,6 +866,7 @@ def _checkTaxonomy(taxID):
 
         # convert to merged taxID first if needs
         if taxID in taxMerged:
+            logger.info( f"Merged taxID found: {taxID} -> {taxMerged[taxID]}." )
             taxID = taxMerged[taxID]
 
         if (taxID in taxNames) and (taxID in taxParents):
