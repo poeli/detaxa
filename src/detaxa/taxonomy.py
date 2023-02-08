@@ -272,7 +272,7 @@ def taxid2lineage( tid, all_major_rank=True, print_strain=False, space2underscor
         return sep.join(texts) 
 
 def taxid2lineageDICT( tid, all_major_rank=True, print_strain=True, space2underscore=False, guess_type=False):
-    return _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
+    return _taxid2lineage( tid, all_major_rank, print_strain, space2underscore, guess_type)
 
 def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore, guess_type):
     taxID = _checkTaxonomy( tid )
