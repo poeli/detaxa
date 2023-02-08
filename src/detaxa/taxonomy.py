@@ -271,10 +271,10 @@ def taxid2lineage( tid, all_major_rank=True, print_strain=False, space2underscor
     else:
         return sep.join(texts) 
 
-def taxid2lineageDICT( tid, all_major_rank=True, print_strain=False, space2underscore=False):
+def taxid2lineageDICT( tid, all_major_rank=True, print_strain=True, space2underscore=False, guess_type=False):
     return _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
 
-def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
+def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore, guess_type):
     taxID = _checkTaxonomy( tid )
     if taxID == "unknown": return {}
     if taxID in tidLineageDict: return tidLineageDict[taxID]
@@ -304,10 +304,11 @@ def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
         if name == 'root': break
 
     # try to get the closest "no_rank" taxa to "type" representing subtype/group (mainly for virus)
-    typeTID = taxid2type(tid)
-    if typeTID:
-        info["type"]["name"]  = _getTaxName(typeTID)
-        info["type"]["taxid"] = typeTID
+    if guess_type==True:
+        typeTID = taxid2type(tid)
+        if typeTID:
+            info["type"]["name"]  = _getTaxName(typeTID)
+            info["type"]["taxid"] = typeTID
 
     last = str_name
 
@@ -338,9 +339,10 @@ def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore):
 
         last=level[lvl]
 
-    if orig_rank == "strain":
-        info["strain"]["name"]  = str_name
-        info["strain"]["taxid"] = tid
+    if print_strain==True:
+        if orig_rank == "strain":
+            info["strain"]["name"]  = str_name
+            info["strain"]["taxid"] = tid
 
     tidLineageDict[tid] = info
     return info
