@@ -10,6 +10,7 @@ import os
 import tarfile
 import requests
 import logging
+from typing import Union, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -46,260 +47,107 @@ major_level_to_abbr = {}
 abbr_to_major_level = {}
 
 
-def taxid2rank( taxID, guess_strain=True ):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return "unknown"
+# --- helper functions ---
 
-    if taxID == '1':
-        return "root"
+def _getTaxDepth(tid: str) -> str:
+    """Get the depth of a taxonomy ID [warning: only support Kraken taxa inputs]"""
+    if tid in taxMerged: tid = taxMerged[tid]
+    return taxDepths[tid]
 
-    if taxRanks[taxID] == "no rank" and guess_strain:
-        # a leaf taxonomy is a strain
-        if taxidIsLeaf(taxID):
-            return "strain"
-        # if not
+def _getTaxName(tid: str) -> str:
+    """Get the name of a taxonomy ID"""
+    if tid in taxMerged: tid = taxMerged[tid]
+    return taxNames[tid]
+
+def _getTaxParent(tid: str) -> str:
+    """Get the parent taxid of a taxonomy ID"""
+    if tid in taxMerged: tid = taxMerged[tid]
+    return taxParents[tid]
+
+def _getTaxRank(tid: str) -> str:
+    """Get the rank of a taxonomy ID"""
+    if tid in taxMerged: tid = taxMerged[tid]
+    return taxRanks[tid]
+
+def _die(msg: str) -> str:
+    sys.exit(msg)
+
+def _checkTaxonomy(tid: Union[int, str]):
+    """Check if a taxonomy ID is present in the taxonomy database"""
+
+    if not len(taxParents):
+        logger.fatal("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
+        _die("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
+
+    if tid:
+        # tid must be in string type
+        tid = str(tid)
+
+        # convert to merged tid first if needs
+        if tid in taxMerged:
+            logger.info( f"Merged tid found: {tid} -> {taxMerged[tid]}." )
+            tid = taxMerged[tid]
+
+        if (tid in taxNames) and (tid in taxParents):
+            return tid
         else:
-            nmtid = taxid2nearestMajorTaxid(taxID)
-            nmrank = _getTaxRank(nmtid)
-            if nmrank == "species":
-                return "species - others"
-            else:
-                return "others"
-    
-    return taxRanks[taxID]
+            return "unknown"
 
-def taxid2name(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown":
-        return "unknown"
-    else:
-        return _getTaxName(taxID)
-
-def taxid2depth(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown":
-        return "unknown"
-    else:
-        return _getTaxDepth(taxID)
-
-def taxid2type(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return "unknown"
-
-    origID = taxID
-    lastID = taxID
-    taxID = taxParents[taxID]
-
-    while taxID != '1' and taxRanks[taxID] != 'species':
-        lastID = taxID
-        taxID = taxParents[taxID]
-
-    if taxRanks[taxID] != 'species':
-        taxID = 0
-    else:
-        taxID = lastID
-        if taxID == origID: taxID = 0
-
-    return taxID
-
-def taxid2parent(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return "unknown"
-
-    taxID = taxParents[taxID]
-    while taxID != '1' and taxRanks[taxID] == 'no rank':
-        taxID = taxParents[taxID]
-
-    return taxID
-
-def name2taxid(name, rank=None, partial_match=False, method='all', reset=False):
+def _taxid2fullLink(tid: Union[int, str]) -> dict:
     """
-    name2taxid: convert organism name to taxid
+    Returns a dictionary containing the full lineage of the target taxon (e.g. {`[parent_tid]`: `tid`,...}).
+
+    Args:
+        tid (Union[int, str]): Taxonomy ID of the target taxon.
+
+    Returns:
+        dict: A dictionary containing the full lineage of the target taxon.
+
     """
-    global nameTid
-
-    # reset previous mapping results
-    if reset:
-        nameTid = {}
-    
-    if not name in nameTid:
-        matched_taxid = []
-        for taxid in taxNames:
-            if partial_match==True:
-                if not name in taxNames[taxid]:
-                    continue
-            else:
-                if name!=taxNames[taxid]:
-                    continue
-            
-            if rank:
-                if _getTaxRank(taxid)==rank:
-                    matched_taxid.append(taxid)
-            else:
-                matched_taxid.append(taxid)
-
-            # return when the first match found
-            if method=='first' and len(matched_taxid):
-                nameTid[name] = matched_taxid
-                return nameTid[name]
-        
-        nameTid[name] = matched_taxid
-        return nameTid[name]
-    else:
-        return nameTid[name]
-
-def taxid2nameOnRank( taxID, target_rank=None ):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return "unknown"
-    if taxID == 1: return "root"
-    if target_rank == "root": return "root"
-
-    if taxID:
-        rank = _getTaxRank(taxID)
-        name = _getTaxName(taxID)
-
-        if target_rank == "strain" and taxidIsLeaf(taxID):
-            return name
-
-        while taxID:
-            if rank.upper() == target_rank.upper(): return name
-            if name == 'root': break
-            taxID = _getTaxParent(taxID)
-            rank = _getTaxRank(taxID)
-            name = _getTaxName(taxID)
-    else:
-        return ""
-
-def taxid2taxidOnRank( taxID, target_rank=None ):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return "unknown"
-
-    if taxID:
-        rank = _getTaxRank(taxID)
-        name = _getTaxName(taxID)
-
-        if target_rank == rank or ( target_rank == 'strain' and rank == 'no rank'): return taxID
-        if target_rank == "root": return 1
-
-        while taxID:
-            if rank.upper() == target_rank.upper(): return taxID
-            if name == 'root': break
-
-            taxID = _getTaxParent(taxID)
-            rank = _getTaxRank(taxID)
-            name = _getTaxName(taxID)
-    else:
-        return ""
-
-def taxidIsLeaf(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return False
-    if not taxID in taxNumChilds:
-        return True
-    else:
-        return False
-
-def _taxid2fullLink(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return {}
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return {}
     link = _autoVivification()
 
-    while taxID != '1':
-        name = _getTaxName(taxID)
+    while tid != '1':
+        name = _getTaxName(tid)
         if not name: break
         
-        parID = _getTaxParent(taxID)
-        link[parID] = taxID
-        taxID = parID
+        parID = _getTaxParent(tid)
+        link[parID] = tid
+        tid = parID
     
     return link
 
-def taxid2fullLineage( taxID, sep='|', use_rank_abbr=False, space2underscore=True):
-    link = _taxid2fullLink(taxID)
-    texts = []
-    if len(link):
-        for p_taxID in link:
-            taxID = link[p_taxID]
-            rank = _getTaxRank(taxID)
-            name = _getTaxName(taxID)
 
-            if use_rank_abbr and (rank in major_level_to_abbr):
-                rank =  major_level_to_abbr[rank]
+def _taxid2lineage(tid: Union[int, str], all_major_rank: bool=True, print_strain: bool=True, 
+                   space2underscore: bool=False, guess_type: bool=False):
+    """Get the lineage of a taxonomy ID as a dictionary"""
 
-            if sep == ';':
-                texts.append(f"{rank}__{name}")
-            else:
-                texts.append(f"{rank}|{taxID}|{name}")
-    
-    texts.reverse()
-
-    if space2underscore:
-        return sep.join(texts).replace(' ', '_')
-    else:
-        return sep.join(texts)
-
-def taxid2fullLinkDict(taxID):
-    return _taxid2fullLink( taxID)
-
-def taxid2nearestMajorTaxid(taxID):
-    taxID = _checkTaxonomy(taxID)
-    if taxID == "unknown": return "unknown"
-    ptid = _getTaxParent(taxID)
-    while ptid != '1':
-        tmp = _getTaxRank( ptid )
-        if tmp in major_level_to_abbr:
-            return ptid
-        else:
-            ptid = _getTaxParent( ptid )
-
-    return "1"
-
-def taxid2lineage( tid, all_major_rank=True, print_strain=False, space2underscore=False, sep="|"):
-    lineage = _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
-    texts = []
-    for rank in major_level_to_abbr:
-        if rank in lineage:
-            if print_strain==False and rank=="strain":
-                continue
-            if sep == ";":
-                texts.append( f"{major_level_to_abbr[rank]}__{lineage[rank]['name']}" )
-            else:
-                texts.append( f"{rank}|{lineage[rank]['taxid']}|{lineage[rank]['name']}" ) 
-    
-    if space2underscore:
-        return sep.join(texts).replace(' ', '_')
-    else:
-        return sep.join(texts) 
-
-def taxid2lineageDICT( tid, all_major_rank=True, print_strain=True, space2underscore=False, guess_type=False):
-    return _taxid2lineage( tid, all_major_rank, print_strain, space2underscore, guess_type)
-
-def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore, guess_type):
-    taxID = _checkTaxonomy( tid )
-    if taxID == "unknown": return {}
-    if taxID in tidLineageDict: return tidLineageDict[taxID]
+    tid = _checkTaxonomy( tid )
+    if tid == "unknown": return {}
+    if tid in tidLineageDict: return tidLineageDict[tid]
 
     info = _autoVivification()
     level = {abbr: '' for abbr in abbr_to_major_level}
 
-    rank = _getTaxRank(taxID)
+    rank = _getTaxRank(tid)
     orig_rank = rank
-    name = _getTaxName(taxID)
+    name = _getTaxName(tid)
     str_name = name
     if space2underscore: str_name = str_name.replace(" ", "_")
 
-    while taxID:
+    while tid:
         if rank in major_level_to_abbr:
             if space2underscore: name = name.replace(" ", "_")
             level[major_level_to_abbr[rank]] = name
 
             #for output JSON
             info[rank]["name"] = name
-            info[rank]["taxid"] = taxID
+            info[rank]["taxid"] = tid
 
-        taxID = _getTaxParent(taxID)
-        rank = _getTaxRank(taxID)
-        name = _getTaxName(taxID)
+        tid = _getTaxParent(tid)
+        rank = _getTaxRank(tid)
+        name = _getTaxName(tid)
 
         if name == 'root': break
 
@@ -347,23 +195,395 @@ def _taxid2lineage(tid, all_major_rank, print_strain, space2underscore, guess_ty
     tidLineageDict[tid] = info
     return info
 
-def _getTaxDepth(taxID):
-    if taxID in taxMerged: taxID = taxMerged[taxID]
-    return taxDepths[taxID]
+def _loadAbbrJson(abbr_json_path: str) -> None:
+    """Load abbreviations for major ranks from a JSON file"""
 
-def _getTaxName(taxID):
-    if taxID in taxMerged: taxID = taxMerged[taxID]
-    return taxNames[taxID]
+    import json
+    global major_level_to_abbr, abbr_to_major_level
 
-def _getTaxParent(taxID):
-    if taxID in taxMerged: taxID = taxMerged[taxID]
-    return taxParents[taxID]
+    # Opening JSON file
+    with open(abbr_json_path) as f:    
+        major_level_to_abbr = json.load(f)
+        f.close
 
-def _getTaxRank(taxID):
-    if taxID in taxMerged: taxID = taxMerged[taxID]
-    return taxRanks[taxID]
+    if len(major_level_to_abbr):
+        abbr_to_major_level = {v: k for k, v in major_level_to_abbr.items()}
+    else:
+        logger.fatal( f"None of the major level to aberration loaded from {abbr_json_path}." )
+        _die(f"[ERROR] None of the major level to aberration loaded from {abbr_json_path}.")
 
-def lca_taxid(taxids):
+class _autoVivification(dict):
+    """Implementation of perl's autovivification feature."""
+    def __getitem__(self, item):
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+            value = self[item] = type(self)()
+            return value
+
+# --- main functions ---
+
+def taxid2rank(tid: Union[int, str], guess_strain: bool=True) -> str:
+    """
+    Get the taxonomic rank of a given taxonomic ID.
+    
+    Args:
+        tid (Union[int, str]): Taxonomic ID.
+        guess_strain (bool, optional): Whether to guess the strain when the rank, strain, is not available. 
+            Defaults to True.
+    
+    Returns:
+        str: The taxonomic rank.
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return "unknown"
+
+    if tid == '1':
+        return "root"
+
+    if taxRanks[tid] == "no rank" and guess_strain:
+        # a leaf taxonomy is a strain
+        if taxidIsLeaf(tid):
+            return "strain"
+        # if not
+        else:
+            nmtid = taxid2nearestMajorTaxid(tid)
+            nmrank = _getTaxRank(nmtid)
+            if nmrank == "species":
+                return "species - others"
+            else:
+                return "others"
+    
+    return taxRanks[tid]
+
+def taxid2name(tid: Union[int, str]) -> str:
+    """
+    Get the taxonomic name of a given taxonomic ID.
+    
+    Args:
+        tid (Union[int, str]): Taxonomic ID.
+    
+    Returns:
+        str: The taxonomic name.
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown":
+        return "unknown"
+    else:
+        return _getTaxName(tid)
+
+def taxid2depth(tid: Union[int, str]) -> int:
+    """
+    Get the depth of a given taxonomic ID.
+    
+    Args:
+        tid (Union[int, str]): Taxonomic ID.
+    
+    Returns:
+        int: The depth of the taxonomic ID in the taxonomy tree.
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown":
+        return "unknown"
+    else:
+        return _getTaxDepth(tid)
+
+def taxid2type(tid: Union[int, str]):
+    """
+    Guessing the `type` of a given taxonomic ID. It could be rank of `group`, `serotype`...etc.
+    
+    Args:
+        tid (Union[int, str]): Taxonomic ID.
+    
+    Returns:
+        Union[int, str]: The type of the taxonomic ID.
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return "unknown"
+
+    origID = tid
+    lastID = tid
+    tid = taxParents[tid]
+
+    while tid != '1' and taxRanks[tid] != 'species':
+        lastID = tid
+        tid = taxParents[tid]
+
+    if taxRanks[tid] != 'species':
+        tid = 0
+    else:
+        tid = lastID
+        if tid == origID: tid = 0
+
+    return tid
+
+def taxid2parent(tid: Union[int, str]):
+    """
+    Get the parent of a given taxonomic ID.
+    
+    Args:
+        tid (Union[int, str]): Taxonomic ID.
+    
+    Returns:
+        Union[int, str]: The parent of the taxonomic ID.
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return "unknown"
+
+    tid = taxParents[tid]
+    while tid != '1' and taxRanks[tid] == 'no rank':
+        tid = taxParents[tid]
+
+    return tid
+
+def name2taxid(name, rank=None, partial_match=False, method='all', reset=False) -> list:
+    """
+    Get the taxonomic ID of a given taxonomic name.
+    
+    Args:
+        name (str): Taxonomic scientific name.
+        rank: The expected rank of the taxonomic name.
+        partial_match (bool, optional): Whether to allow partial matches. Defaults to False.
+        method (str, optional): Search method, can be 'all', or 'first'. Defaults to 'all'.
+        reset (bool, optional): Mapping results are cached. Whether to clean up previous searches. 
+            Defaults to False.
+    
+    Returns:
+        list: The list of matched taxonomic ID.
+    """
+    global nameTid
+
+    # reset previous mapping results
+    if reset:
+        nameTid = {}
+    
+    if not name in nameTid:
+        matched_taxid = []
+        for taxid in taxNames:
+            if partial_match==True:
+                if not name in taxNames[taxid]:
+                    continue
+            else:
+                if name!=taxNames[taxid]:
+                    continue
+            
+            if rank:
+                if _getTaxRank(taxid)==rank:
+                    matched_taxid.append(taxid)
+            else:
+                matched_taxid.append(taxid)
+
+            # return when the first match found
+            if method=='first' and len(matched_taxid):
+                nameTid[name] = matched_taxid
+                return nameTid[name]
+        
+        nameTid[name] = matched_taxid
+        return nameTid[name]
+    else:
+        return nameTid[name]
+
+def taxid2nameOnRank(tid: Union[int, str], target_rank=None) -> str:
+    """
+    Get the taxonomic name of a given taxonomic ID at a specific rank.
+    
+    Args:
+        tid (Union[int, str]): Taxonomic ID.
+        target_rank (str, optional): Target rank. Defaults to None.
+    
+    Returns:
+        str: The taxonomic name at the target rank.
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return "unknown"
+    if tid == 1: return "root"
+    if target_rank == "root": return "root"
+
+    if tid:
+        rank = _getTaxRank(tid)
+        name = _getTaxName(tid)
+
+        if target_rank == "strain" and taxidIsLeaf(tid):
+            return name
+
+        while tid:
+            if rank.upper() == target_rank.upper(): return name
+            if name == 'root': break
+            tid = _getTaxParent(tid)
+            rank = _getTaxRank(tid)
+            name = _getTaxName(tid)
+    else:
+        return ""
+
+def taxid2taxidOnRank(tid: Union[int, str], target_rank=None ) -> str:
+    """
+    Returns the taxonomy ID of the nearest parent taxon at the specified rank.
+
+    Args:
+        tid (Union[int, str]): Taxonomy ID of the target taxon.
+        target_rank (str): The target rank to search for. Defaults to None.
+
+    Returns:
+        str: Taxonomy ID of the nearest parent taxon at the specified rank.
+
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return "unknown"
+
+    if tid:
+        rank = _getTaxRank(tid)
+        name = _getTaxName(tid)
+
+        if target_rank == rank or ( target_rank == 'strain' and rank == 'no rank'): return tid
+        if target_rank == "root": return 1
+
+        while tid:
+            if rank.upper() == target_rank.upper(): return tid
+            if name == 'root': break
+
+            tid = _getTaxParent(tid)
+            rank = _getTaxRank(tid)
+            name = _getTaxName(tid)
+    else:
+        return ""
+
+def taxidIsLeaf(tid: Union[int, str]) -> bool:
+    """
+    Checks if the taxonomy ID corresponds to a leaf node in the taxonomic tree.
+
+    Args:
+        tid (Union[int, str]): Taxonomy ID of the target taxon.
+
+    Returns:
+        bool: True if the taxon is a leaf node, False otherwise.
+
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return False
+    if not tid in taxNumChilds:
+        return True
+    else:
+        return False
+
+
+def taxid2fullLineage(tid: Union[int, str], sep='|', use_rank_abbr=False, space2underscore=True) -> str:
+    """
+    Returns the full lineage of the target taxon in a specified format.
+
+    Args:
+        tid (Union[int, str]): Taxonomy ID of the target taxon.
+        sep (str): Separator used to separate fields in the output. Defaults to '|'.
+        use_rank_abbr (bool): If True, abbreviated rank names are used. Defaults to False.
+        space2underscore (bool): If True, spaces in the output are replaced by underscores. Defaults to True.
+
+    Returns:
+        str: Full lineage of the target taxon in the specified format.
+
+    """
+    link = _taxid2fullLink(tid)
+    texts = []
+    if len(link):
+        for p_taxID in link:
+            tid = link[p_taxID]
+            rank = _getTaxRank(tid)
+            name = _getTaxName(tid)
+
+            if use_rank_abbr and (rank in major_level_to_abbr):
+                rank =  major_level_to_abbr[rank]
+
+            if sep == ';':
+                texts.append(f"{rank}__{name}")
+            else:
+                texts.append(f"{rank}|{tid}|{name}")
+    
+    texts.reverse()
+
+    if space2underscore:
+        return sep.join(texts).replace(' ', '_')
+    else:
+        return sep.join(texts)
+
+def taxid2fullLinkDict(tid: Union[int, str]) -> str:
+    """
+    Returns a dictionary containing the full lineage of the target taxon.
+
+    Args:
+        tid (Union[int, str]): Taxonomy ID of the target taxon.
+
+    Returns:
+        dict: A dictionary containing the full lineage of the target taxon.
+
+    """
+    return _taxid2fullLink(tid)
+
+def taxid2nearestMajorTaxid(tid: Union[int, str]) -> str:
+    """
+    Returns the taxonomy ID of the nearest parent taxon at a major rank.
+
+    Args:
+        tid (Union[int, str]): Taxonomy ID of the target taxon.
+
+    Returns:
+        str: Taxonomy ID of the nearest parent taxon at a major rank.
+
+    """
+
+    tid = _checkTaxonomy(tid)
+    if tid == "unknown": return "unknown"
+    ptid = _getTaxParent(tid)
+    while ptid != '1':
+        tmp = _getTaxRank(ptid)
+        if tmp in major_level_to_abbr:
+            return ptid
+        else:
+            ptid = _getTaxParent(ptid)
+
+    return "1"
+
+def taxid2lineage(tid: Union[int, str], all_major_rank=True, print_strain=False, space2underscore=False, sep="|") -> str:
+    """
+    Returns the taxonomic lineage for a given taxonomic identifier (tid) as a formatted string.
+
+    Parameters:
+        tid (Union[int, str]): A taxonomic identifier, which can be either an integer or a string.
+        all_major_rank (bool): If True, all major taxonomic ranks will be included in the lineage; if False, only the lowest common ancestor will be included. Default is True.
+        print_strain (bool): If True, strain information will be included in the lineage; if False, it will be omitted. Default is False.
+        space2underscore (bool): If True, spaces in the taxonomic names will be replaced with underscores; if False, they will be left as spaces. Default is False.
+        sep (str): The separator used to join the taxonomic ranks, taxids, and names in the returned string. Default is "|".
+
+    Returns:
+        str: A formatted string containing the taxonomic lineage information, with each rank separated by the specified separator (default is "|").
+
+    """
+    
+    lineage = _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
+    texts = []
+    for rank in major_level_to_abbr:
+        if rank in lineage:
+            if print_strain==False and rank=="strain":
+                continue
+            if sep == ";":
+                texts.append( f"{major_level_to_abbr[rank]}__{lineage[rank]['name']}" )
+            else:
+                texts.append( f"{rank}|{lineage[rank]['taxid']}|{lineage[rank]['name']}" ) 
+    
+    if space2underscore:
+        return sep.join(texts).replace(' ', '_')
+    else:
+        return sep.join(texts) 
+
+def taxid2lineageDICT(tid: Union[int, str], all_major_rank=True, print_strain=True, space2underscore=False, guess_type=False):
+    return _taxid2lineage( tid, all_major_rank, print_strain, space2underscore, guess_type)
+
+def lca_taxid(taxids: list) -> str:
     """ lca_taxid
     Return lowest common ancestor (LCA) taxid of input taxids
     """
@@ -393,11 +613,22 @@ def lca_taxid(taxids):
 
     return '1'
 
-def acc2taxid( acc,  accession2taxid_file=None):
+def acc2taxid(acc: str, accession2taxid_file: Optional[str] = None) -> str:
+    """
+    Get the taxonomy ID for a given accession.
+
+    Args:
+        acc (str): The accession number to look up.
+        accession2taxid_file (str, optional): The path to the accession to taxonomy ID mapping file. If not specified, the default file in the taxonomy directory will be used.
+
+    Returns:
+        str: The taxonomy ID for the given accession.
+    """
+
     if not accession2taxid_file:
         accession2taxid_file = f"{taxonomy_dir}/accession2taxid.tsv"
 
-    #remove version number#
+    # Remove version number
     acc = acc.split('.')[0]
 
     if not acc in accTid:
@@ -438,20 +669,21 @@ def acc2taxid( acc,  accession2taxid_file=None):
 
     return accTid[acc]
 
-def loadTaxonomy(dbpath=None,
-                 cus_taxonomy_file=None, 
-                 cus_taxonomy_format="tsv",
-                 auto_download=True):
-    """ loadTaxonomy
-    Method to load taxonomy
+def loadTaxonomy(dbpath: Optional[str] = None,
+                 cus_taxonomy_file: Optional[str] = None, 
+                 cus_taxonomy_format: str = 'tsv',
+                 auto_download: bool = True) -> None:
+    """
+    Load taxonomy files into memory for use in subsequent conversions.
 
-    Arguments:
-    dbpath [STR] The path to search NCBI taxonomy files (default None)
-    cus_taxonomy_file [STR] The path of the custom taxonomy file (default None)
-    cus_taxonomy_format ['tsv','mgnify_lineage','gtdb_taxonomy','gtdb_metadata'] The format of the custom taxonomy file. (default 'tsv')
-    auto_download [BOOL] Download NCBI taxonomy files when local database not found. (default True)
+    Args:
+        dbpath (str, optional): Path to store and load the taxonomy files. Defaults to None.
+        cus_taxonomy_file (str, optional): Path to a custom taxonomy file. Defaults to None.
+        cus_taxonomy_format (str, optional): Format of the custom taxonomy file, one of ['tsv','mgnify_lineage','gtdb_taxonomy','gtdb_metadata']. Defaults to 'tsv'.
+        auto_download (bool, optional): If True, automatically download the taxonomy files if they are not found locally. Defaults to True.
 
-    Return: None
+    Returns:
+        None
     """
     global taxonomy_dir, abbr_json_path
     
@@ -519,23 +751,6 @@ def loadTaxonomy(dbpath=None,
         logger.fatal( f"invalid cus_taxonomy_format: {cus_taxonomy_format}" )
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
 
-
-def _loadAbbrJson(abbr_json_path):
-    import json
-    global major_level_to_abbr, abbr_to_major_level
-
-    # Opening JSON file
-    with open(abbr_json_path) as f:    
-        major_level_to_abbr = json.load(f)
-        f.close
-
-    if len(major_level_to_abbr):
-        abbr_to_major_level = {v: k for k, v in major_level_to_abbr.items()}
-    else:
-        logger.fatal( f"None of the major level to aberration loaded from {abbr_json_path}." )
-        _die(f"[ERROR] None of the major level to aberration loaded from {abbr_json_path}.")
-
-
 def NCBITaxonomyDownload(dir=None):
     global taxonomy_dir
 
@@ -596,12 +811,12 @@ def loadTaxonomyTSV(tsv_taxonomy_file):
     except IOError:
         _die( "Failed to open custom tsv taxonomy file: %s." % tsv_taxonomy_file )
 
-def loadNCBITaxonomy(taxdump_tgz_file=None, 
-                     names_dmp_file=None, 
-                     nodes_dmp_file=None, 
-                     merged_dmp_file=None):
+def loadNCBITaxonomy(taxdump_tgz_file: Optional[str] = None, 
+                     names_dmp_file: Optional[str] = None, 
+                     nodes_dmp_file: Optional[str] = None, 
+                     merged_dmp_file: Optional[str] = None):
 
-    # loading major levels to json file
+    # loading major levels from json file
     _loadAbbrJson(abbr_json_path)
 
     # try to load taxonomy from taxonomy.tsv
@@ -848,34 +1063,3 @@ def loadGTDBTaxonomy(gtdb_taxonomy_file=None, gtdb_taxonomy_format="gtdb_metadat
             _die( "Failed to open custom taxonomy file: %s." % gtdb_taxonomy_file )
 
     logger.info( f"Done parsing taxonomy files (total {len(taxParents)} taxa loaded)" )
-
-class _autoVivification(dict):
-    """Implementation of perl's autovivification feature."""
-    def __getitem__(self, item):
-        try:
-            return dict.__getitem__(self, item)
-        except KeyError:
-            value = self[item] = type(self)()
-            return value
-
-def _die( msg ):
-    sys.exit(msg)
-
-def _checkTaxonomy(taxID):
-    if not len(taxParents):
-        logger.fatal("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
-        _die("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
-
-    if taxID:
-        # taxID must be in string type
-        taxID = str(taxID)
-
-        # convert to merged taxID first if needs
-        if taxID in taxMerged:
-            logger.info( f"Merged taxID found: {taxID} -> {taxMerged[taxID]}." )
-            taxID = taxMerged[taxID]
-
-        if (taxID in taxNames) and (taxID in taxParents):
-            return taxID
-        else:
-            return "unknown"
