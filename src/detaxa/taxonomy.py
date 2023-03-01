@@ -4,13 +4,12 @@
 # B-11, Los Alamos National Lab
 # Date: 05/15/2016
 
-import imp
 import sys
 import os
 import tarfile
 import requests
 import logging
-from typing import Union, Dict, Optional
+from typing import Union, Optional, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +41,10 @@ accTid         = {}
 tidLineage     = {}
 tidLineageDict = {}
 nameTid        = {}
-
 major_level_to_abbr = {}
 abbr_to_major_level = {}
 
-
 # --- helper functions ---
-
 def _getTaxDepth(tid: str) -> str:
     """Get the depth of a taxonomy ID [warning: only support Kraken taxa inputs]"""
     if tid in taxMerged: tid = taxMerged[tid]
@@ -341,7 +337,7 @@ def taxid2parent(tid: Union[int, str]):
 
     return tid
 
-def name2taxid(name, rank=None, partial_match=False, method='all', reset=False) -> list:
+def name2taxid(name, rank=None, partial_match=False, method: Literal['all', 'first']='all', reset=False) -> list:
     """
     Get the taxonomic ID of a given taxonomic name.
     
@@ -474,7 +470,7 @@ def taxidIsLeaf(tid: Union[int, str]) -> bool:
         return False
 
 
-def taxid2fullLineage(tid: Union[int, str], sep='|', use_rank_abbr=False, space2underscore=True) -> str:
+def taxid2fullLineage(tid: Union[int, str], sep: str='|', use_rank_abbr=False, space2underscore=True) -> str:
     """
     Returns the full lineage of the target taxon in a specified format.
 
@@ -668,6 +664,36 @@ def acc2taxid(acc: str, accession2taxid_file: Optional[str] = None) -> str:
                 accTid[acc] = ""
 
     return accTid[acc]
+
+def taxid2decendentOnRank(tid: Union[int, str], target_rank=None) -> list:
+    """
+    Return a list of taxids for all descendants of the given taxid at the specified target rank.
+
+    Arguments:
+    - tid: The taxid to retrieve the descendants for. Can be either an integer or a string.
+    - target_rank: The rank at which to retrieve the descendants. Defaults to None, which means all descendants will be returned.
+
+    Returns:
+    - A list of taxids for all descendants of the given taxid at the specified target rank.
+    """
+    tid = _checkTaxonomy(tid)
+    decd_tids = [k for k, v in taxParents.items() if v == tid]
+
+    tids = []
+
+    if not target_rank:
+        return decd_tids
+    else:
+        for tid in decd_tids:
+            if target_rank == _getTaxRank(tid):
+                tids.append(tid)
+            else:
+                if taxidIsLeaf(tid):
+                    continue
+                else:
+                    tids.extend(taxid2decendentOnRank(tid, target_rank))
+
+        return tids
 
 def loadTaxonomy(dbpath: Optional[str] = None,
                  cus_taxonomy_file: Optional[str] = None, 

@@ -18,7 +18,7 @@ setup(
     package_dir={'': 'src'},
     package_data={'detaxa':['taxonomy_db/*.json']},
     description='NCBI taxonomy and lineage lookup',
-    keywords=["taxonomy"],
+    keywords=["taxonomy", "bioinformatics", "tree"],
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
     entry_points={ 
