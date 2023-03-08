@@ -9,6 +9,7 @@ import os
 import tarfile
 import requests
 import logging
+from . import __version__
 from typing import Union, Optional, Literal
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ tidLineageDict = {}
 nameTid        = {}
 major_level_to_abbr = {}
 abbr_to_major_level = {}
+df_names = None
 
 # --- helper functions ---
 def _getTaxDepth(tid: str) -> str:
@@ -121,7 +123,7 @@ def _taxid2lineage(tid: Union[int, str], all_major_rank: bool=True, print_strain
 
     tid = _checkTaxonomy( tid )
     if tid == "unknown": return {}
-    if tid in tidLineageDict: return tidLineageDict[tid]
+    # if tid in tidLineageDict: return tidLineageDict[tid]
 
     info = _autoVivification()
     level = {abbr: '' for abbr in abbr_to_major_level}
@@ -317,70 +319,110 @@ def taxid2type(tid: Union[int, str]):
 
     return tid
 
-def taxid2parent(tid: Union[int, str]):
+def taxid2parent(tid: Union[int, str], norank: bool=False) -> str:
     """
     Get the parent of a given taxonomic ID.
     
     Args:
         tid (Union[int, str]): Taxonomic ID.
+        norank (bool): Find the next parent if it's 'no-rank'.
     
     Returns:
-        Union[int, str]: The parent of the taxonomic ID.
+        str: The taxonomic ID of the parent.
     """
 
     tid = _checkTaxonomy(tid)
     if tid == "unknown": return "unknown"
 
-    tid = taxParents[tid]
-    while tid != '1' and taxRanks[tid] == 'no rank':
-        tid = taxParents[tid]
+    tid = _getTaxParent(tid)
+
+    if not norank:
+        while tid != '1' and (taxRanks[tid] == 'no rank'):
+            tid = _getTaxParent(tid)
 
     return tid
 
-def name2taxid(name, rank=None, partial_match=False, method: Literal['all', 'first']='all', reset=False) -> list:
+def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cutoff=0.7, reset=False, expand=True) -> list:
     """
     Get the taxonomic ID of a given taxonomic name.
     
     Args:
         name (str): Taxonomic scientific name.
-        rank: The expected rank of the taxonomic name.
-        partial_match (bool, optional): Whether to allow partial matches. Defaults to False.
-        method (str, optional): Search method, can be 'all', or 'first'. Defaults to 'all'.
+        rank (str, optional): The expected rank of the taxonomic name.
+        superkingdom (str, optional): The expected superkingdom of the taxonomic name.
+        fuzzy (bool, optional): Whether to allow fuzzy search. Defaults to False.
+        max_matches (int, optional): Reporting max number of taxid. Defaults to 3.
+        cutoff (float, optional): Similarity cutoff for difflib.get_close_matches(). Defaults to 0.7.
         reset (bool, optional): Mapping results are cached. Whether to clean up previous searches. 
+            Defaults to False.
+        expand (bool, optional): Search the entire 'names.dmp' if True, otherwise search sientific names only. 
             Defaults to False.
     
     Returns:
         list: The list of matched taxonomic ID.
     """
-    global nameTid
+    global nameTid, df_names, taxonomy_dir
+    import pandas as pd
 
     # reset previous mapping results
-    if reset:
-        nameTid = {}
+    if reset: nameTid = {}
+
+    # if expand is True, loading names.dmp
+    names_dmp_file = taxonomy_dir+"/names.dmp"
+
+    if df_names is None and expand and os.path.isfile( names_dmp_file ):
+        df_names = pd.read_csv(names_dmp_file, 
+                         sep='\t\|\t', 
+                         engine='python', 
+                         header=None, 
+                         names=['taxid', 'name', 'annot', 'type'], 
+                         usecols=['taxid','name'],
+                         index_col='name')
     
     if not name in nameTid:
         matched_taxid = []
-        for taxid in taxNames:
-            if partial_match==True:
-                if not name in taxNames[taxid]:
-                    continue
-            else:
-                if name!=taxNames[taxid]:
-                    continue
-            
-            if rank:
-                if _getTaxRank(taxid)==rank:
-                    matched_taxid.append(taxid)
-            else:
-                matched_taxid.append(taxid)
 
-            # return when the first match found
-            if method=='first' and len(matched_taxid):
-                nameTid[name] = matched_taxid
-                return nameTid[name]
-        
-        nameTid[name] = matched_taxid
-        return nameTid[name]
+        if expand:
+            import difflib
+            matches = difflib.get_close_matches(name, df_names.index, max_matches, cutoff)
+            logger.debug(matches)
+            df_temp = df_names.loc[matches,:]
+
+            if rank:
+                df_temp['rank'] = df_temp.taxid.apply(taxid2rank)
+                idx = df_temp['rank']==rank
+                df_temp = df_temp[idx]
+            
+            if superkingdom:
+                df_temp['sk'] = df_temp.taxid.apply(lambda x: taxid2nameOnRank(x, 'superkingdom'))
+                idx = df_temp['sk']==superkingdom
+                df_temp = df_temp[idx]
+            
+            nameTid[name] = df_temp.head(max_matches).taxid.to_list()
+            return nameTid[name]
+
+        else: # searching scientific names only
+            for taxid in taxNames:
+                if fuzzy==True:
+                    if not name in taxNames[taxid]:
+                        continue
+                else:
+                    if name!=taxNames[taxid]:
+                        continue
+                
+                if rank:
+                    if _getTaxRank(taxid)==rank:
+                        matched_taxid.append(taxid)
+                else:
+                    matched_taxid.append(taxid)
+
+                # return when the first match found
+                if max_matches==1 and len(matched_taxid):
+                    nameTid[name] = matched_taxid
+                    return nameTid[name]
+            
+            nameTid[name] = matched_taxid
+            return nameTid[name]
     else:
         return nameTid[name]
 
@@ -712,9 +754,11 @@ def loadTaxonomy(dbpath: Optional[str] = None,
         None
     """
     global taxonomy_dir, abbr_json_path
-    
+
     if dbpath:
         taxonomy_dir = dbpath
+
+    logger.debug( f"v{__version__}" )
 
     logger.debug( f"Taxonomy directory: {taxonomy_dir}" )
 
