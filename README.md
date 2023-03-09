@@ -90,11 +90,15 @@ Convert taxonomy id:
 
 Convert accession number:
 
-- `acc2taxid( acc )`
+- `acc2taxid(acc)`
 
 Convert taxa to taonxomy id:
 
-- `name2taxid( name, rank=None, partial_match=False )`
+- `name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cutoff=0.7, reset=False, expand=True)`
+    - for example: name2taxid('E coli')
+        - return: [562, 566546, 54679]
+    - for example: name2taxid('E coli', rank='species', reset=True)
+        - return: [562]
 
 ## Taxonomy information files <a name="taxonomy_info_files"></a>
 
