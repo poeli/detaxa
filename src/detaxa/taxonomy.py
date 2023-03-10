@@ -342,7 +342,7 @@ def taxid2parent(tid: Union[int, str], norank: bool=False) -> str:
 
     return tid
 
-def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cutoff=0.7, reset=False, expand=True) -> list:
+def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, cutoff=0.7, max_matches=3, reset=False, expand=True) -> list:
     """
     Get the taxonomic ID of a given taxonomic name.
     
@@ -350,9 +350,10 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cu
         name (str): Taxonomic scientific name.
         rank (str, optional): The expected rank of the taxonomic name.
         superkingdom (str, optional): The expected superkingdom of the taxonomic name.
-        fuzzy (bool, optional): Whether to allow fuzzy search. Defaults to False.
+        fuzzy (bool, optional): Whether to allow fuzzy search. Defaults to True.
+        cutoff (float, optional): Similarity cutoff for difflib.get_close_matches(). 
+            Only apply to `expand` mode. Cutoff will set to 1 if `fuzzy` set to False. Defaults to 0.7.
         max_matches (int, optional): Reporting max number of taxid. Defaults to 3.
-        cutoff (float, optional): Similarity cutoff for difflib.get_close_matches(). Defaults to 0.7.
         reset (bool, optional): Mapping results are cached. Whether to clean up previous searches. 
             Defaults to False.
         expand (bool, optional): Search the entire 'names.dmp' if True, otherwise search sientific names only. 
@@ -364,8 +365,7 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cu
     global nameTid, df_names, taxonomy_dir
     import pandas as pd
 
-    # reset previous mapping results
-    if reset: nameTid = {}
+    if not fuzzy: cutoff=1
 
     # if expand is True, loading names.dmp
     names_dmp_file = taxonomy_dir+"/names.dmp"
@@ -379,13 +379,13 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cu
                          usecols=['taxid','name'],
                          index_col='name')
     
-    if not name in nameTid:
+    if not name in nameTid or reset:
         matched_taxid = []
 
         if expand:
             import difflib
             matches = difflib.get_close_matches(name, df_names.index, max_matches, cutoff)
-            logger.debug(matches)
+            logger.debug(f'{name}: {matches}')
             df_temp = df_names.loc[matches,:]
 
             if rank:
@@ -417,14 +417,14 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, max_matches=3, cu
                     matched_taxid.append(taxid)
 
                 # return when the first match found
-                if max_matches==1 and len(matched_taxid):
+                if len(matched_taxid)==max_matches:
                     nameTid[name] = matched_taxid
                     return nameTid[name]
             
             nameTid[name] = matched_taxid
-            return nameTid[name]
+            return nameTid[name][:max_matches]
     else:
-        return nameTid[name]
+        return nameTid[name][:max_matches]
 
 def taxid2nameOnRank(tid: Union[int, str], target_rank=None) -> str:
     """
