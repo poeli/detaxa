@@ -141,12 +141,16 @@ def acc2taxid(accession, mapping_tsv, debug):
               required=False,
               default=None,
               type=str)
+@click.option('--acc',
+              help='update accession2taxid data',
+              is_flag=True,
+              default=False)
 @click.option('--debug',
               help='debug mode',
               is_flag=True,
               default=False)
 
-def update(database, debug):
+def update(database, acc, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -159,7 +163,7 @@ def update(database, debug):
             format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
             datefmt='%Y-%m-%d %H:%M',
         )
-    t.NCBITaxonomyDownload(database)
+    t.NCBITaxonomyDownload(database, accession2taxid=acc)
 
 
 if __name__ == '__main__':

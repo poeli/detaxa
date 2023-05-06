@@ -3,6 +3,7 @@
 # Po-E (Paul) Li
 # B-11, Los Alamos National Lab
 # Date: 05/15/2016
+# Latest Update: 05/05/2023
 
 import sys
 import os
@@ -651,9 +652,9 @@ def lca_taxid(taxids: list) -> str:
 
     return '1'
 
-def acc2taxid(acc: str, accession2taxid_file: Optional[str] = None) -> str:
+def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
     """
-    Get the taxonomy ID for a given accession.
+    Get the taxonomy ID for a given accession from NCBI accession2taxid tsv file.
 
     Args:
         acc (str): The accession number to look up.
@@ -662,9 +663,6 @@ def acc2taxid(acc: str, accession2taxid_file: Optional[str] = None) -> str:
     Returns:
         str: The taxonomy ID for the given accession.
     """
-
-    if not accession2taxid_file:
-        accession2taxid_file = f"{taxonomy_dir}/accession2taxid.tsv"
 
     # Remove version number
     acc = acc.split('.')[0]
@@ -685,7 +683,7 @@ def acc2taxid(acc: str, accession2taxid_file: Optional[str] = None) -> str:
                 
                 logger.debug( "start: %15d, posNew: %15d, end: %15d, line: %s" % (start, posNew, end, line) )
                 if line :
-                    (accNew, tid) = line.split('\t')
+                    (accNew, accNewVer, tid, gi) = line.split('\t')
                 else:
                     break
 
@@ -706,6 +704,56 @@ def acc2taxid(acc: str, accession2taxid_file: Optional[str] = None) -> str:
                 accTid[acc] = ""
 
     return accTid[acc]
+
+def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
+    """
+    Get the taxonomy ID for a given accession.
+
+    Args:
+        acc (str): The accession number to look up.
+        type (str, optional): Type of the acession number, either nuc, prot, or pdb. Default is 'nuc'.
+
+    Returns:
+        str: The taxonomy ID for the given accession.
+    """
+    global taxonomy_dir
+    import glob
+    acc2taxid_files = []
+    
+    # preparing accession2taxid files
+    if type == 'nuc':
+        acc2taxid_files = [
+            f'{taxonomy_dir}/accession2taxid/nucl_gb.accession2taxid',
+            f'{taxonomy_dir}/accession2taxid/nucl_wgs.accession2taxid.EXTRA',
+            f'{taxonomy_dir}/accession2taxid/nucl_wgs.accession2taxid',
+            f'{taxonomy_dir}/accession2taxid/dead_nucl.accession2taxid',
+            f'{taxonomy_dir}/accession2taxid/dead_wgs.accession2taxid',
+        ]
+    elif type == 'prot':
+        acc2taxid_files = [
+            f'{taxonomy_dir}/accession2taxid/prot.accession2taxid.FULL',
+            f'{taxonomy_dir}/accession2taxid/dead_prot.accession2taxid',
+        ]
+    elif type == 'pdb':
+        acc2taxid_files = [
+            f'{taxonomy_dir}/accession2taxid/pdb.accession2taxid'
+        ]
+
+    # check if accession2taxid files exist
+    for acc2taxid_file in acc2taxid_files:
+        if not os.path.isfile(acc2taxid_file):
+            acc2taxid_files.remove(acc2taxid_file)
+
+    # download accession2taxid files if not exist
+    if len(acc2taxid_files) == 0:
+        logger.info( f"NCBI accession2taxid data not found." )
+        NCBITaxonomyDownload(accession2taxid=True)
+
+    for acc2taxid_file in acc2taxid_files:
+        taxid = acc2taxid_raw(acc, accession2taxid_file=acc2taxid_file)
+        if taxid: return taxid
+
+    return ""
 
 def taxid2decendentOnRank(tid: Union[int, str], target_rank=None) -> list:
     """
@@ -821,41 +869,55 @@ def loadTaxonomy(dbpath: Optional[str] = None,
         logger.fatal( f"invalid cus_taxonomy_format: {cus_taxonomy_format}" )
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
 
-def NCBITaxonomyDownload(dir=None):
+def NCBITaxonomyDownload(dir=None, taxdump=True, accession2taxid=False):
     global taxonomy_dir
 
     if not dir:
         dir = taxonomy_dir
         logger.info( f"No destination taxonomy dir input. Use default: {dir}..." )
 
-    url = 'http://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz'
-    logger.info( f"Auto downloading taxanomy from {url}..." )
-    # download taxonomy file if auto_download enabled
-    r = requests.get(url)
-    if not os.path.exists( taxonomy_dir ):
-        os.makedirs( taxonomy_dir )
-    
-    taxdump_tgz_file = f'{taxonomy_dir}/taxdump.tar.gz'
+    if not os.path.exists( dir ):
+        os.makedirs( dir )
+        logger.info( f"Taxonomy dir doesn't exist. Make dir: {dir}..." )
 
-    with open(taxdump_tgz_file, 'wb') as f:
-        f.write(r.content)
-    if os.path.getsize( taxdump_tgz_file ):
-        logger.info( f"Saved to {taxdump_tgz_file}." )
-    else:
-        logger.fatal( f"Failed to download or save taxonomy files." )
-        _die( "[ERROR] Failed to download or save taxonomy files." )    
+    if taxdump:
+        url = 'http://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz'
+        logger.info( f"Auto downloading taxanomy from {url}..." )
+        # download taxonomy file if auto_download enabled
+        r = requests.get(url)
+        
+        taxdump_tgz_file = f'{dir}/taxdump.tar.gz'
 
-    # extract
-    tax_tar = tarfile.open(taxdump_tgz_file, "r:gz")
-    logger.info( f"Extracting nodes.dmp..." )
-    tax_tar.extract('nodes.dmp', taxonomy_dir)
-    logger.info( f"Extracting names.dmp..." )
-    tax_tar.extract('names.dmp', taxonomy_dir)
-    logger.info( f"Extracting merged.dmp..." )
-    tax_tar.extract('merged.dmp', taxonomy_dir)
-    tax_tar.close()
-    # delete taxdump_tgz_file
-    os.remove(taxdump_tgz_file)
+        with open(taxdump_tgz_file, 'wb') as f:
+            f.write(r.content)
+        if os.path.getsize( taxdump_tgz_file ):
+            logger.info( f"Saved to {taxdump_tgz_file}." )
+        else:
+            logger.fatal( f"Failed to download or save taxonomy files." )
+            _die( "[ERROR] Failed to download or save taxonomy files." )    
+
+        # extract
+        tax_tar = tarfile.open(taxdump_tgz_file, "r:gz")
+        logger.info( f"Extracting nodes.dmp..." )
+        tax_tar.extract('nodes.dmp', dir)
+        logger.info( f"Extracting names.dmp..." )
+        tax_tar.extract('names.dmp', dir)
+        logger.info( f"Extracting merged.dmp..." )
+        tax_tar.extract('merged.dmp', dir)
+        tax_tar.close()
+        # delete taxdump_tgz_file
+        os.remove(taxdump_tgz_file)
+
+    if accession2taxid:
+        import subprocess
+        url = "rsync://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid"
+        
+        logger.info( f"Auto ryncing accession2taxid data from {url}..." )
+        subprocess.call(["rsync", "-auvh", "--exclude='prot.accession2taxid.gz*'", "--exclude='prot.accession2taxid.FULL.*.gz*'", url, dir])
+
+        logger.info( f"Decompressing accession2taxid data..." )
+        subprocess.call(["gzip", "-d", f"{dir}/accession2taxid/*.gz"])
+
 
 def loadTaxonomyTSV(tsv_taxonomy_file):
 

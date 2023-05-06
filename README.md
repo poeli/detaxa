@@ -13,6 +13,8 @@ or
 pip install .
 ```
 
+(Optional) You can execute `detaxa update` to download current taxdump file from NCBI.
+
 ## Usage
 
 Use as a python module:
@@ -88,9 +90,11 @@ Convert taxonomy id:
     - for example: taxid2lineageDICT( 2697049, print_strain=True )
         - return: {'strain': {'name': 'Severe acute respiratory syndrome coronavirus 2', 'taxid': '2697049'}, 'species': {'name': 'Severe acute respiratory syndrome-related coronavirus', 'taxid': '694009'}, 'genus': {'name': 'Betacoronavirus', 'taxid': '694002'}, 'family': {'name': 'Coronaviridae', 'taxid': '11118'}, 'order': {'name': 'Nidovirales', 'taxid': '76804'}, 'class': {'name': 'Pisoniviricetes', 'taxid': '2732506'}, 'phylum': {'name': 'Pisuviricota', 'taxid': '2732408'}, 'superkingdom': {'name': 'Viruses', 'taxid': '10239'}}
 
-Convert accession number:
+Convert accession number of a sequence to taxid:
 
 - `acc2taxid(acc)`
+    - for example: acc2taxid('NC_000913.3')
+        - return: 511145
 
 Convert taxa to taonxomy id:
 
@@ -127,28 +131,23 @@ DeTaxa takes various taxonomy files. If the path of the taxonomy directory isn't
     - Example file can be find in `example/bac120_*_r207.tsv`
 
 6. (optional) Mapping table of accession number to taxid in TSV format
-    - accession2taxid.tsv (requirement for function `acc2taxid()`)
-
+    - The mapping tables (`*.accession2taxid*.gz`) are downloaded from `ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/`.
+    - Users can use `detaxa update --acc` to download these data.
 
 ## Pre-processing taxonomy information
 
-Retrieve taxonomy information can be downloaded from NCBI FTP site. In fact, `taxdump.tar.gz` is all we need if not converting accession# to taxid.
+The easist way is run `detaxa update` or the library will download one automatically. If you want to download taxonomy information manully, it can be downloaded from NCBI FTP site. In fact, `taxdump.tar.gz` is all we need if not converting accession# to taxid.
 
 ```sh
 # create database directory
 mkdir -p taxonomy_db
 cd taxonomy_db
 rsync -auvzh --delete rsync://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz taxonomy/
-rsync -auvzh --delete rsync://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid taxonomy/
 
 tar -xzf taxonomy/taxdump.tar.gz -C taxonomy/
 cp taxonomy/names.dmp .
 cp taxonomy/nodes.dmp .
 cp taxonomy/merged.dmp .
-
-cd taxonomy/accession2taxid/
-gzip -dc *nucl*.gz dead_wgs.accession2taxid.gz | cut -f 1,3 | LC_ALL=C sort -T . > ../../accession2taxid.nucl.tsv
-ln -s accession2taxid.nucl.tsv accession2taxid.tsv
 ```
 
 #### Generating taxonomy.tsv <a name="taxonomy_tsv"></a>
@@ -224,15 +223,6 @@ DeTaxa will automatically convert following abbreviations to the full name of ra
 
 ```sh
 perl -pe 's/\s+\|//g' ../taxonomy/merged.dmp > taxonomy.merged.tsv
-```
-
-#### Generating `accession2taxid.tsv`
-
-The tsv file is essentially a sorted 1-to-1 mapping table of accession number and taxonomy ID.
-
-```sh
-zcat ../taxonomy/accession2taxid/*nucl*.gz | cut -f 2,3 | sed 's/\.[[:digit:]]*//' | LC_ALL=C sort > accession2taxid.nucl.tsv
-ln -s accession2taxid.nucl.tsv accession2taxid.tsv
 ```
 
 ## Customizing major levels and abbreviations <a name="levels_and_abbr"></a>
