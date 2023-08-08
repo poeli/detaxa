@@ -125,7 +125,7 @@ def name2tid(name, database, custom_taxa, custom_fmt, rank, partial, debug):
               help='debug mode',
               is_flag=True,
               default=False)
-def acc2taxid(accession, mapping_tsv, debug):
+def acc2taxid(accession, mapping, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -133,7 +133,7 @@ def acc2taxid(accession, mapping_tsv, debug):
             datefmt='%Y-%m-%d %H:%M',
         )
 
-    print(t.acc2taxid(accession, mapping_tsv))
+    print(t.acc2taxid(accession, mapping))
 
 @cli.command()
 @click.option('-d', '--database',
@@ -141,8 +141,24 @@ def acc2taxid(accession, mapping_tsv, debug):
               required=False,
               default=None,
               type=str)
-@click.option('--acc',
-              help='update accession2taxid data',
+@click.option('--accNucl',
+              help='update accession2taxid nucl data',
+              is_flag=True,
+              default=False)
+@click.option('--accWgs',
+              help='update accession2taxid wgs data',
+              is_flag=True,
+              default=False)
+@click.option('--accProt',
+              help='update accession2taxid prot data',
+              is_flag=True,
+              default=False)
+@click.option('--accPdb',
+              help='update accession2taxid pdb data',
+              is_flag=True,
+              default=False)
+@click.option('--accDead',
+              help='update accession2taxid dead acc data',
               is_flag=True,
               default=False)
 @click.option('--debug',
@@ -150,7 +166,7 @@ def acc2taxid(accession, mapping_tsv, debug):
               is_flag=True,
               default=False)
 
-def update(database, acc, debug):
+def update(database, accnucl, accwgs, accprot, accpdb, accdead, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -163,7 +179,7 @@ def update(database, acc, debug):
             format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
             datefmt='%Y-%m-%d %H:%M',
         )
-    t.NCBITaxonomyDownload(database, accession2taxid=acc)
+    t.NCBITaxonomyDownload(database, acc_nucl=accnucl, acc_wgs=accwgs, acc_prot=accprot, acc_pdb=accpdb, acc_dead=accdead)
 
 
 if __name__ == '__main__':
