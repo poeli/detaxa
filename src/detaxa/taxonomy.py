@@ -705,13 +705,13 @@ def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
 
     return accTid[acc]
 
-def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
+def acc2taxid(acc: str, type: Optional[str]) -> str:
     """
     Get the taxonomy ID for a given accession.
 
     Args:
         acc (str): The accession number to look up.
-        type (str, optional): Type of the acession number, either nuc, prot, or pdb. Default is 'nuc'.
+        type (str, optional): Type of the acession number, either nucl, prot, or pdb. Default is 'nucl'.
 
     Returns:
         str: The taxonomy ID for the given accession.
@@ -721,7 +721,7 @@ def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
     acc2taxid_files = []
     
     # preparing accession2taxid files
-    if type == 'nuc':
+    if type==None or type == 'nuc':
         acc2taxid_files = [
             f'{taxonomy_dir}/accession2taxid/nucl_gb.accession2taxid',
             f'{taxonomy_dir}/accession2taxid/nucl_wgs.accession2taxid.EXTRA',
@@ -740,16 +740,20 @@ def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
         ]
 
     # check if accession2taxid files exist
+    avail_acc2taxid_files = []
+
     for acc2taxid_file in acc2taxid_files:
-        if not os.path.isfile(acc2taxid_file):
-            acc2taxid_files.remove(acc2taxid_file)
+        logger.debug( f"checking {acc2taxid_file}" )
+        if os.path.isfile(acc2taxid_file):
+            avail_acc2taxid_files.append(acc2taxid_file)
+    logger.debug( f"acc2taxid_files: {avail_acc2taxid_files}" )
 
     # download accession2taxid files if not exist
-    if len(acc2taxid_files) == 0:
-        logger.info( f"NCBI accession2taxid data not found." )
-        NCBITaxonomyDownload(accession2taxid=True)
+    if len(avail_acc2taxid_files) == 0:
+        logger.info( f"NCBI accession2taxid data not found. Please run `detaxa update --help` for details." )
+        print( f"WARNING: NCBI accession2taxid data not found. Please run `detaxa update --help` for details." )
 
-    for acc2taxid_file in acc2taxid_files:
+    for acc2taxid_file in avail_acc2taxid_files:
         taxid = acc2taxid_raw(acc, accession2taxid_file=acc2taxid_file)
         if taxid: return taxid
 

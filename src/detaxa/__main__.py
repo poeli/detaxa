@@ -76,7 +76,8 @@ def taxid(taxid, database, custom_taxa, custom_fmt, debug):
               help='path of custom taxonomy file',
               required=False,
               default=None,
-              type=str)
+              type=str
+              )
 @click.option('-f', '--custom-fmt',
               help="custom taxonomy format 'tsv', 'lineage', 'gtdb_taxonomy' and 'gtdb_metadata'",
               required=False,
@@ -97,7 +98,8 @@ def taxid(taxid, database, custom_taxa, custom_fmt, debug):
 @click.option('--debug',
               help='debug mode',
               is_flag=True,
-              default=False)
+              default=False
+              )
 
 def name2tid(name, database, custom_taxa, custom_fmt, rank, partial, debug):
     if debug:
