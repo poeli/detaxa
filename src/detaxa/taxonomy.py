@@ -934,7 +934,7 @@ def NCBITaxonomyDownload(dir=None, taxdump=True, acc_wgs=False, acc_nucl=False, 
         subprocess.call(cmd, shell=True)
 
         logger.info( f"Decompressing accession2taxid data..." )
-        cmd = f"gzip -d {dir}/accession2taxid/*.gz"
+        cmd = f"gzip -f -d {dir}/accession2taxid/*.gz"
         subprocess.call(cmd, shell=True)
     
     logger.info( f"Done." )
