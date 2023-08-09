@@ -11,7 +11,7 @@ import tarfile
 import requests
 import logging
 from . import __version__
-from typing import Union, Optional, Literal
+from typing import Union, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -705,13 +705,13 @@ def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
 
     return accTid[acc]
 
-def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
+def acc2taxid(acc: str, type: Optional[str]) -> str:
     """
     Get the taxonomy ID for a given accession.
 
     Args:
         acc (str): The accession number to look up.
-        type (str, optional): Type of the acession number, either nuc, prot, or pdb. Default is 'nuc'.
+        type (str, optional): Type of the acession number, either nucl, prot, or pdb. Default is 'nucl'.
 
     Returns:
         str: The taxonomy ID for the given accession.
@@ -721,7 +721,7 @@ def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
     acc2taxid_files = []
     
     # preparing accession2taxid files
-    if type == 'nuc':
+    if type==None or type == 'nuc':
         acc2taxid_files = [
             f'{taxonomy_dir}/accession2taxid/nucl_gb.accession2taxid',
             f'{taxonomy_dir}/accession2taxid/nucl_wgs.accession2taxid.EXTRA',
@@ -740,16 +740,20 @@ def acc2taxid(acc: str, type: Optional[str] = 'nuc') -> str:
         ]
 
     # check if accession2taxid files exist
+    avail_acc2taxid_files = []
+
     for acc2taxid_file in acc2taxid_files:
-        if not os.path.isfile(acc2taxid_file):
-            acc2taxid_files.remove(acc2taxid_file)
+        logger.debug( f"checking {acc2taxid_file}" )
+        if os.path.isfile(acc2taxid_file):
+            avail_acc2taxid_files.append(acc2taxid_file)
+    logger.debug( f"acc2taxid_files: {avail_acc2taxid_files}" )
 
     # download accession2taxid files if not exist
-    if len(acc2taxid_files) == 0:
-        logger.info( f"NCBI accession2taxid data not found." )
-        NCBITaxonomyDownload(accession2taxid=True)
+    if len(avail_acc2taxid_files) == 0:
+        logger.info( f"NCBI accession2taxid data not found. Please run `detaxa update --help` for details." )
+        print( f"WARNING: NCBI accession2taxid data not found. Please run `detaxa update --help` for details." )
 
-    for acc2taxid_file in acc2taxid_files:
+    for acc2taxid_file in avail_acc2taxid_files:
         taxid = acc2taxid_raw(acc, accession2taxid_file=acc2taxid_file)
         if taxid: return taxid
 
@@ -845,7 +849,7 @@ def loadTaxonomy(dbpath: Optional[str] = None,
             _die( "[ERROR] No available taxonomy files." )
 
     # try to load taxonomy from taxonomy.tsv
-    if os.path.isfile( nodes_dmp_file ) and  os.path.isfile( names_dmp_file ):
+    if os.path.isfile( nodes_dmp_file ) and os.path.isfile( names_dmp_file ):
         loadNCBITaxonomy(taxdump_tgz_file, names_dmp_file, nodes_dmp_file, merged_dmp_file)
     elif os.path.isfile(taxdump_tgz_file):
         loadNCBITaxonomy(taxdump_tgz_file, names_dmp_file, nodes_dmp_file, merged_dmp_file)
@@ -869,7 +873,7 @@ def loadTaxonomy(dbpath: Optional[str] = None,
         logger.fatal( f"invalid cus_taxonomy_format: {cus_taxonomy_format}" )
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
 
-def NCBITaxonomyDownload(dir=None, taxdump=True, accession2taxid=False):
+def NCBITaxonomyDownload(dir=None, taxdump=True, acc_wgs=False, acc_nucl=False, acc_prot=False, acc_pdb=False, acc_dead=True):
     global taxonomy_dir
 
     if not dir:
@@ -905,19 +909,35 @@ def NCBITaxonomyDownload(dir=None, taxdump=True, accession2taxid=False):
         logger.info( f"Extracting merged.dmp..." )
         tax_tar.extract('merged.dmp', dir)
         tax_tar.close()
-        # delete taxdump_tgz_file
-        os.remove(taxdump_tgz_file)
+        # # delete taxdump_tgz_file
+        # os.remove(taxdump_tgz_file)
 
-    if accession2taxid:
+    if acc_wgs or acc_nucl or acc_prot or acc_pdb or acc_dead:
         import subprocess
         url = "rsync://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid"
         
+        args = ["rsync", "-avh"]
+        if not acc_dead:
+            args.append("--exclude='*dead*'")
+        if not acc_wgs:
+            args.append("--exclude='*wgs.*'")
+        if not acc_prot:
+            args.append("--exclude='*prot.*'")
+        if not acc_nucl:
+            args.append("--exclude='*nucl.*'")
+        if not acc_pdb:
+            args.append("--exclude='*pdb.*'")
+
+        cmd = " ".join(args+[url, dir])
+        logger.debug(cmd)
         logger.info( f"Auto ryncing accession2taxid data from {url}..." )
-        subprocess.call(["rsync", "-auvh", "--exclude='prot.accession2taxid.gz*'", "--exclude='prot.accession2taxid.FULL.*.gz*'", url, dir])
+        subprocess.call(cmd, shell=True)
 
         logger.info( f"Decompressing accession2taxid data..." )
-        subprocess.call(["gzip", "-d", f"{dir}/accession2taxid/*.gz"])
-
+        cmd = f"gzip -f -d {dir}/accession2taxid/*.gz"
+        subprocess.call(cmd, shell=True)
+    
+    logger.info( f"Done." )
 
 def loadTaxonomyTSV(tsv_taxonomy_file):
 
@@ -952,7 +972,7 @@ def loadNCBITaxonomy(taxdump_tgz_file: Optional[str] = None,
     _loadAbbrJson(abbr_json_path)
 
     # try to load taxonomy from taxonomy.tsv
-    if os.path.isfile( nodes_dmp_file ) and  os.path.isfile( names_dmp_file ):
+    if os.path.isfile(nodes_dmp_file) and os.path.isfile(names_dmp_file):
         try:
             # read name from names.dmp
             logger.info( f"Open taxonomy name file: {names_dmp_file}" )

@@ -131,8 +131,9 @@ DeTaxa takes various taxonomy files. If the path of the taxonomy directory isn't
     - Example file can be find in `example/bac120_*_r207.tsv`
 
 6. (optional) Mapping table of accession number to taxid in TSV format
-    - The mapping tables (`*.accession2taxid*.gz`) are downloaded from `ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/`.
-    - Users can use `detaxa update --acc` to download these data.
+    - The mapping tables (`*.accession2taxid*.gz`) can be downloaded from `ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/`.
+    - NCBI accession2taxid files are sizable datasets. Users have the flexibility to select the specific table that aligns with their accession number types. For instance, employing the command `detaxa update --accNucl` enables the retrieval of the nucleotide mapping table.
+    - Use `detaxa update --help` for more detail.
 
 ## Pre-processing taxonomy information
 
