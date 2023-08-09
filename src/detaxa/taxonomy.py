@@ -705,7 +705,7 @@ def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
 
     return accTid[acc]
 
-def acc2taxid(acc: str, type: Optional[str]) -> str:
+def acc2taxid(acc: str, type: Optional[str]=None) -> str:
     """
     Get the taxonomy ID for a given accession.
 
@@ -746,7 +746,7 @@ def acc2taxid(acc: str, type: Optional[str]) -> str:
         logger.debug( f"checking {acc2taxid_file}" )
         if os.path.isfile(acc2taxid_file):
             avail_acc2taxid_files.append(acc2taxid_file)
-    logger.debug( f"acc2taxid_files: {avail_acc2taxid_files}" )
+    logger.debug( f"avail_acc2taxid_files: {avail_acc2taxid_files}" )
 
     # download accession2taxid files if not exist
     if len(avail_acc2taxid_files) == 0:
