@@ -912,7 +912,7 @@ def NCBITaxonomyDownload(dir=None, taxdump=True, acc_wgs=False, acc_nucl=False, 
         # # delete taxdump_tgz_file
         # os.remove(taxdump_tgz_file)
 
-    if acc_wgs or acc_nucl or acc_prot or acc_pdb or acc_dead:
+    if acc_wgs or acc_nucl or acc_prot or acc_pdb:
         import subprocess
         url = "rsync://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid"
         
