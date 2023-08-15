@@ -3,7 +3,7 @@
 # Po-E (Paul) Li
 # B-11, Los Alamos National Lab
 # Date: 05/15/2016
-# Latest Update: 05/05/2023
+# Latest Update: 08/09/2023
 
 import sys
 import os
@@ -13,7 +13,7 @@ import logging
 from . import __version__
 from typing import Union, Optional
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 # Set default path of `taxonomy_db/` and `major_level_to_abbr.json`:
 # The default `taxonomy_db/` path is your the location
@@ -705,7 +705,7 @@ def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
 
     return accTid[acc]
 
-def acc2taxid(acc: str, type: Optional[str]=None) -> str:
+def acc2taxid(acc: str, type: Optional[str]='nucl') -> str:
     """
     Get the taxonomy ID for a given accession.
 
@@ -721,7 +721,7 @@ def acc2taxid(acc: str, type: Optional[str]=None) -> str:
     acc2taxid_files = []
     
     # preparing accession2taxid files
-    if type==None or type == 'nuc':
+    if type == 'nucl':
         acc2taxid_files = [
             f'{taxonomy_dir}/accession2taxid/nucl_gb.accession2taxid',
             f'{taxonomy_dir}/accession2taxid/nucl_wgs.accession2taxid.EXTRA',
@@ -746,6 +746,7 @@ def acc2taxid(acc: str, type: Optional[str]=None) -> str:
         logger.debug( f"checking {acc2taxid_file}" )
         if os.path.isfile(acc2taxid_file):
             avail_acc2taxid_files.append(acc2taxid_file)
+    
     logger.debug( f"avail_acc2taxid_files: {avail_acc2taxid_files}" )
 
     # download accession2taxid files if not exist
