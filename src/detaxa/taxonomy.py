@@ -806,11 +806,14 @@ def loadTaxonomy(dbpath: Optional[str] = None,
         None
     """
     global taxonomy_dir, abbr_json_path
+    
+    logger.debug( f"v{__version__}" )
 
     if dbpath:
-        taxonomy_dir = dbpath
-
-    logger.debug( f"v{__version__}" )
+        if os.path.isdir(dbpath):
+            taxonomy_dir = dbpath
+        else:
+            logger.warning( f"invalid argument: {dbpath} is not a directory. Default dbpath will be used." )
 
     logger.debug( f"Taxonomy directory: {taxonomy_dir}" )
 
