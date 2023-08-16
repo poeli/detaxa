@@ -813,7 +813,7 @@ def loadTaxonomy(dbpath: Optional[str] = None,
         if os.path.isdir(dbpath):
             taxonomy_dir = dbpath
         else:
-            logger.warning( f"invalid argument: {dbpath} is not a directory. Default dbpath will be used." )
+            logger.warning( f"invalid parameter: {dbpath} is not a directory. Default dbpath will be used." )
 
     logger.debug( f"Taxonomy directory: {taxonomy_dir}" )
 
