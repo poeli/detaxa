@@ -120,7 +120,11 @@ def _taxid2fullLink(tid: Union[int, str]) -> dict:
 
 def _taxid2lineage(tid: Union[int, str], all_major_rank: bool=True, print_strain: bool=True, 
                    space2underscore: bool=False, guess_type: bool=False):
-    """Get the lineage of a taxonomy ID as a dictionary"""
+    """
+    Given a taxonomic ID, returns the lineage of the taxon as a dictionary.
+    The lineage is represented as a dictionary where the keys are the taxonomic ranks and the values are the corresponding taxon names.
+    If the taxon is not found in the nodes dictionary, an empty dictionary is returned.
+    """
 
     tid = _checkTaxonomy( tid )
     if tid == "unknown": return {}
@@ -241,7 +245,7 @@ def taxid2rank(tid: Union[int, str], guess_strain: bool=True) -> str:
     if tid == '1':
         return "root"
 
-    if taxRanks[tid] == "no rank" and guess_strain:
+    if _getTaxRank(tid) == "no rank" and guess_strain:
         # a leaf taxonomy is a strain
         if taxidIsLeaf(tid):
             return "strain"
@@ -254,7 +258,7 @@ def taxid2rank(tid: Union[int, str], guess_strain: bool=True) -> str:
             else:
                 return "others"
     
-    return taxRanks[tid]
+    return _getTaxRank(tid)
 
 def taxid2name(tid: Union[int, str]) -> str:
     """
@@ -306,13 +310,13 @@ def taxid2type(tid: Union[int, str]):
 
     origID = tid
     lastID = tid
-    tid = taxParents[tid]
+    tid = _getTaxParent(tid)
 
-    while tid != '1' and taxRanks[tid] != 'species':
+    while tid != '1' and _getTaxRank(tid) != 'species':
         lastID = tid
-        tid = taxParents[tid]
+        tid = _getTaxParent(tid)
 
-    if taxRanks[tid] != 'species':
+    if _getTaxRank(tid) != 'species':
         tid = 0
     else:
         tid = lastID
@@ -338,7 +342,7 @@ def taxid2parent(tid: Union[int, str], norank: bool=False) -> str:
     tid = _getTaxParent(tid)
 
     if not norank:
-        while tid != '1' and (taxRanks[tid] == 'no rank'):
+        while tid != '1' and (_getTaxRank(tid) == 'no rank'):
             tid = _getTaxParent(tid)
 
     return tid
@@ -813,6 +817,7 @@ def loadTaxonomy(dbpath: Optional[str] = None,
     if dbpath:
         if os.path.isdir(dbpath):
             taxonomy_dir = dbpath
+            abbr_json_path = f"{taxonomy_dir}/major_level_to_abbr.json"
         else:
             logger.warning( f"invalid parameter: {dbpath} is not a directory. Default dbpath will be used." )
 
