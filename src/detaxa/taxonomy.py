@@ -204,6 +204,8 @@ def _loadAbbrJson(abbr_json_path: str) -> None:
     import json
     global major_level_to_abbr, abbr_to_major_level
 
+    logging.debug(f'Loading major level to abbr from {abbr_json_path}...')
+
     # Opening JSON file
     with open(abbr_json_path) as f:    
         major_level_to_abbr = json.load(f)
@@ -817,7 +819,8 @@ def loadTaxonomy(dbpath: Optional[str] = None,
     if dbpath:
         if os.path.isdir(dbpath):
             taxonomy_dir = dbpath
-            abbr_json_path = f"{taxonomy_dir}/major_level_to_abbr.json"
+            if os.path.isfile( f"{taxonomy_dir}/major_level_to_abbr.json" ):
+                abbr_json_path = f"{taxonomy_dir}/major_level_to_abbr.json"
         else:
             logger.warning( f"invalid parameter: {dbpath} is not a directory. Default dbpath will be used." )
 
