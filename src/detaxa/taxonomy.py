@@ -51,7 +51,7 @@ df_names = None
 def _getTaxDepth(tid: str) -> str:
     """Get the depth of a taxonomy ID [warning: only support Kraken taxa inputs]"""
     if tid in taxMerged: tid = taxMerged[tid]
-    return taxDepths[tid]
+    return int(taxDepths[tid])
 
 def _getTaxName(tid: str) -> str:
     """Get the name of a taxonomy ID"""
@@ -963,7 +963,7 @@ def loadTaxonomyTSV(tsv_taxonomy_file):
                 if not line: continue
                 tid, depth, parent, rank, name = line.split('\t')
                 taxParents[tid] = parent
-                taxDepths[tid] = depth
+                taxDepths[tid] = int(depth)
                 taxRanks[tid] = rank
                 taxNames[tid] = name
                 if parent in taxNumChilds:
@@ -1005,7 +1005,7 @@ def loadNCBITaxonomy(taxdump_tgz_file: Optional[str] = None,
                     tid = fields[0]
                     parent = fields[1]
                     taxParents[tid] = parent
-                    taxDepths[tid] = taxDepths[parent]+1 if parent in taxDepths else 0 # could have potiential bug if child node is parsed before parent node.
+                    taxDepths[tid] = int(taxDepths[parent])+1 if parent in taxDepths else 0 # could have potiential bug if child node is parsed before parent node.
                     taxRanks[tid] = fields[2]
                     if parent in taxNumChilds:
                         taxNumChilds[parent] += 1
@@ -1040,7 +1040,7 @@ def loadNCBITaxonomy(taxdump_tgz_file: Optional[str] = None,
                 tid = fields[0]
                 parent = fields[1]
                 taxParents[tid] = parent
-                taxDepths[tid] = taxDepths[parent]+1 if parent in taxDepths else 0 # could have potiential bug if child node is parsed before parent node.
+                taxDepths[tid] = int(taxDepths[parent])+1 if parent in taxDepths else 0 # could have potiential bug if child node is parsed before parent node.
                 taxRanks[tid] = fields[2]
                 if parent in taxNumChilds:
                     taxNumChilds[parent] += 1
