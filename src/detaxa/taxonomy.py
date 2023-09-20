@@ -206,11 +206,24 @@ def _loadAbbrJson(abbr_json_path: str) -> None:
 
     logging.debug(f'Loading major level to abbr from {abbr_json_path}...')
 
-    # Opening JSON file
-    with open(abbr_json_path) as f:    
-        major_level_to_abbr = json.load(f)
-        f.close
-
+    if os.path.isfile(abbr_json_path):
+        # Opening JSON file
+        with open(abbr_json_path) as f:    
+            major_level_to_abbr = json.load(f)
+            f.close
+    else:
+        major_level_to_abbr = {
+            "superkingdom" : "sk",
+            "phylum"       : "p",
+            "class"        : "c",
+            "order"        : "o",
+            "family"       : "f",
+            "genus"        : "g",
+            "species"      : "s",
+            "strain"       : "n"
+        }
+        logger.warning( f"None of the abbreviations for major ranks loaded from a JSON file. Default abbreviations use." )
+        
     if len(major_level_to_abbr):
         abbr_to_major_level = {v: k for k, v in major_level_to_abbr.items()}
     else:
