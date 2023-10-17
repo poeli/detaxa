@@ -3,7 +3,6 @@
 # Po-E (Paul) Li
 # B-11, Los Alamos National Lab
 # Date: 05/15/2016
-# Latest Update: 08/09/2023
 
 import sys
 import os
@@ -118,16 +117,21 @@ def _taxid2fullLink(tid: Union[int, str]) -> dict:
     return link
 
 
-def _taxid2lineage(tid: Union[int, str], all_major_rank: bool=True, print_strain: bool=True, 
-                   space2underscore: bool=False, guess_type: bool=False):
+def _taxid2lineage(tid: Union[int, str], 
+                   all_major_rank: bool=True, 
+                   print_strain: bool=True, 
+                   space2underscore: bool=False, 
+                   guess_type: bool=False):
     """
     Given a taxonomic ID, returns the lineage of the taxon as a dictionary.
     The lineage is represented as a dictionary where the keys are the taxonomic ranks and the values are the corresponding taxon names.
     If the taxon is not found in the nodes dictionary, an empty dictionary is returned.
     """
-
+    tid_orig = tid
     tid = _checkTaxonomy( tid )
-    if tid == "unknown": return {}
+    if tid == "unknown": 
+        logger.debug( f"Unknown taxid: {tid_orig}" )
+        return {}
     # if tid in tidLineageDict: return tidLineageDict[tid]
 
     info = _autoVivification()
@@ -222,7 +226,7 @@ def _loadAbbrJson(abbr_json_path: str) -> None:
             "species"      : "s",
             "strain"       : "n"
         }
-        logger.warning( f"None of the abbreviations for major ranks loaded from a JSON file. Default abbreviations use." )
+        logger.info( f"None of the abbreviations for major ranks loaded from a JSON file. Default abbreviations use." )
         
     if len(major_level_to_abbr):
         abbr_to_major_level = {v: k for k, v in major_level_to_abbr.items()}
@@ -835,7 +839,7 @@ def loadTaxonomy(dbpath: Optional[str] = None,
             if os.path.isfile( f"{taxonomy_dir}/major_level_to_abbr.json" ):
                 abbr_json_path = f"{taxonomy_dir}/major_level_to_abbr.json"
         else:
-            logger.warning( f"invalid parameter: {dbpath} is not a directory. Default dbpath will be used." )
+            logger.info( f"Invalid dbpath: {dbpath} is not a directory. Default dbpath will be used." )
 
     logger.debug( f"Taxonomy directory: {taxonomy_dir}" )
 

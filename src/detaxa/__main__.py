@@ -1,11 +1,10 @@
-#! python
-import os, sys, logging
-import argparse as ap
+#!/usr/bin/env python
+import logging
 from . import taxonomy as t
 from . import __version__
 import click
 
-@click.group(help=f"""deTaxa taxonomy utility v{__version__}.""")
+@click.group(help=f"""DeTaxa taxonomy utility v{__version__}""")
 def cli():
     pass
 
@@ -181,7 +180,12 @@ def update(database, accnucl, accwgs, accprot, accpdb, accdead, debug):
             format='%(asctime)s [%(levelname)s] %(module)s: %(message)s',
             datefmt='%Y-%m-%d %H:%M',
         )
-    t.NCBITaxonomyDownload(database, acc_nucl=accnucl, acc_wgs=accwgs, acc_prot=accprot, acc_pdb=accpdb, acc_dead=accdead)
+    t.NCBITaxonomyDownload(database, 
+                           acc_nucl=accnucl, 
+                           acc_wgs=accwgs, 
+                           acc_prot=accprot, 
+                           acc_pdb=accpdb, 
+                           acc_dead=accdead)
 
 
 if __name__ == '__main__':
