@@ -9,8 +9,12 @@ import os
 import tarfile
 import requests
 import logging
-from . import __version__
 from typing import Union, Optional
+
+try:
+    from . import __version__
+except:
+    __version__ = 'standalone'
 
 logger = logging.getLogger()
 
