@@ -733,7 +733,7 @@ def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
 
     return accTid[acc]
 
-def acc2taxid(acc: str, type: Optional[str]='nucl') -> str:
+def acc2taxid(acc: str, type: Optional[str] = 'nucl', mapping_file: Optional[str] = None) -> str:
     """
     Get the taxonomy ID for a given accession.
 
@@ -766,6 +766,11 @@ def acc2taxid(acc: str, type: Optional[str]='nucl') -> str:
         acc2taxid_files = [
             f'{taxonomy_dir}/accession2taxid/pdb.accession2taxid'
         ]
+
+    if mapping_file:
+        acc2taxid_files = [mapping_file]
+
+    logger.debug( f"type: {type}; acc2taxid_files: {acc2taxid_files}" )
 
     # check if accession2taxid files exist
     avail_acc2taxid_files = []
