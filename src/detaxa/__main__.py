@@ -134,7 +134,7 @@ def acc2taxid(accession, mapping, debug):
             datefmt='%Y-%m-%d %H:%M',
         )
 
-    print(t.acc2taxid(accession, mapping))
+    print(t.acc2taxid(accession, mapping_file=mapping))
 
 @cli.command()
 @click.option('-d', '--database',

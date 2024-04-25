@@ -140,6 +140,7 @@ def _taxid2lineage(tid: Union[int, str],
     info = _autoVivification()
     level = {abbr: '' for abbr in abbr_to_major_level}
 
+    tid_orig = tid
     rank = taxid2rank(tid)
     orig_rank = rank
     name = taxid2name(tid)
@@ -161,7 +162,7 @@ def _taxid2lineage(tid: Union[int, str],
         rank = _getTaxRank(tid)
         name = _getTaxName(tid)
 
-        if name == 'root': break
+        if name == 'root' : break
 
     # try to get the closest "no_rank" taxa to "type" representing subtype/group (mainly for virus)
     if guess_type==True:
@@ -175,13 +176,13 @@ def _taxid2lineage(tid: Union[int, str],
     ranks = list(abbr_to_major_level.keys())
     ranks.reverse()
     idx = 0
-    
+
     # input taxid is a major rank
     if orig_rank in major_level_to_abbr:
         idx = ranks.index( major_level_to_abbr[orig_rank] )
     # if not, find the next major rank
     else:
-        nmtid = taxid2nearestMajorTaxid( tid )
+        nmtid = taxid2nearestMajorTaxid( tid_orig )
         nmrank = taxid2rank( nmtid )
         if nmrank == "root":
             idx = 7
@@ -189,16 +190,20 @@ def _taxid2lineage(tid: Union[int, str],
             idx = ranks.index( major_level_to_abbr[nmrank] )
 
     for lvl in ranks[idx:]:
-        if all_major_rank == False:
-            if not level[lvl]: continue
+        if not all_major_rank:
+            break
 
+        logging.debug(f'{lvl}: {level}')
         if not level[lvl]:
-            level[lvl] = "%s - no_%s_rank"%(last,lvl)
-            info[abbr_to_major_level[lvl]]["name"]  = "%s - no_%s_rank"%(last,lvl)
-            info[abbr_to_major_level[lvl]]["taxid"] = 0
+            level[lvl] = f'{last} - no_{lvl}_rank'
+            info[abbr_to_major_level[lvl]]['name'] = f'{last} - no_{lvl}_rank'
+            info[abbr_to_major_level[lvl]]['taxid'] = 0
+            logging.debug(f'no {lvl} - {level[lvl]}')
 
         last=level[lvl]
 
+    logging.debug(f'{info}')
+    
     if print_strain==True:
         if orig_rank == "strain":
             info["strain"]["name"]  = str_name
@@ -640,7 +645,7 @@ def taxid2nearestMajorTaxid(tid: Union[int, str]) -> str:
 def taxid2lineage(tid: Union[int, str], all_major_rank=True, print_strain=False, space2underscore=False, sep="|") -> str:
     """
     Returns the taxonomic lineage for a given taxonomic identifier (tid) as a formatted string.
-
+    
     Parameters:
         tid (Union[int, str]): A taxonomic identifier, which can be either an integer or a string.
         all_major_rank (bool): If True, all major taxonomic ranks will be included in the lineage; if False, only the lowest common ancestor will be included. Default is True.
@@ -650,9 +655,8 @@ def taxid2lineage(tid: Union[int, str], all_major_rank=True, print_strain=False,
 
     Returns:
         str: A formatted string containing the taxonomic lineage information, with each rank separated by the specified separator (default is "|").
-
     """
-    
+     
     lineage = _taxid2lineage( tid, all_major_rank, print_strain, space2underscore)
     texts = []
     for rank in major_level_to_abbr:
@@ -755,7 +759,7 @@ def acc2taxid_raw(acc: str, accession2taxid_file: Optional[str] = None) -> str:
 
     return accTid[acc]
 
-def acc2taxid(acc: str, type: Optional[str]='nucl') -> str:
+def acc2taxid(acc: str, type: Optional[str] = 'nucl', mapping_file: Optional[str] = None) -> str:
     """
     Get the taxonomy ID for a given accession.
 
@@ -788,6 +792,11 @@ def acc2taxid(acc: str, type: Optional[str]='nucl') -> str:
         acc2taxid_files = [
             f'{taxonomy_dir}/accession2taxid/pdb.accession2taxid'
         ]
+
+    if mapping_file:
+        acc2taxid_files = [mapping_file]
+
+    logger.debug( f"type: {type}; acc2taxid_files: {acc2taxid_files}" )
 
     # check if accession2taxid files exist
     avail_acc2taxid_files = []
