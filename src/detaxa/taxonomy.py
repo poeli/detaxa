@@ -77,8 +77,9 @@ def _checkTaxonomy(tid: Union[int, str]):
     """Check if a taxonomy ID is present in the taxonomy database"""
 
     if not len(taxParents):
-        logger.fatal("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
-        _die("Taxonomy not loaded. \"loadTaxonomy()\" must be called first.")
+        logger.info("Taxonomy not loaded. Call \"loadTaxonomy()\" first to avoid this message...")
+        logger.info("Loading taxonomy...")
+        loadTaxonomy()
 
     if tid:
         # tid must be in string type
@@ -103,7 +104,6 @@ def _taxid2fullLink(tid: Union[int, str]) -> dict:
 
     Returns:
         dict: A dictionary containing the full lineage of the target taxon.
-
     """
     tid = _checkTaxonomy(tid)
     if tid == "unknown": return {}
@@ -371,7 +371,14 @@ def taxid2parent(tid: Union[int, str], norank: bool=False) -> str:
 
     return tid
 
-def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, cutoff=0.7, max_matches=3, reset=False, expand=True) -> list:
+def name2taxid(name: str, 
+               rank: str=None, 
+               superkingdom: str=None, 
+               fuzzy: bool=True, 
+               cutoff: float=0.7, 
+               max_matches: int=3, 
+               reset: bool=False, 
+               expand: bool=True) -> list:
     """
     Get the taxonomic ID of a given taxonomic name.
     
@@ -400,22 +407,35 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, cutoff=0.7, max_m
     names_dmp_file = taxonomy_dir+"/names.dmp"
 
     if df_names is None and expand and os.path.isfile( names_dmp_file ):
+        logging.debug(f"Loading {names_dmp_file}")
         df_names = pd.read_csv(names_dmp_file, 
-                         sep='\t|\t', 
-                         engine='python', 
-                         header=None, 
-                         names=['taxid', 'name', 'annot', 'type'], 
-                         usecols=['taxid','name'],
-                         index_col='name')
+                            sep='\t', 
+                            header=None, 
+                            names=['taxid', 'sep1', 'name', 'sep2', 'annot', 'sep3', 'type', 'sep4'], 
+                            usecols=['taxid','name'],
+                            index_col='name')
+        logging.debug(f"names.dmp loaded")
     
     if not name in nameTid or reset:
         matched_taxid = []
+        df_temp = None
+        logging.debug(f"Searching {name}...")
 
         if expand:
-            import difflib
-            matches = difflib.get_close_matches(name, df_names.index, max_matches, cutoff)
-            logger.debug(f'{name}: {matches}')
-            df_temp = df_names.loc[matches,:]
+            if fuzzy==True:
+                import difflib
+                matches = difflib.get_close_matches(name, df_names.index, max_matches, cutoff)
+                logger.debug(f'{name}: {matches}')
+                df_temp = df_names.loc[matches,:]
+            else:
+                if name in df_names.index:
+                    df_temp = df_names.loc[[name],:]
+                else:
+                    df_temp = df_names.head(0)
+
+            if len(df_temp)==0:
+                nameTid[name] = []
+                return nameTid[name]
 
             if rank:
                 df_temp['rank'] = df_temp.taxid.apply(taxid2rank)
@@ -429,8 +449,7 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, cutoff=0.7, max_m
             
             nameTid[name] = df_temp.head(max_matches).taxid.to_list()
             return nameTid[name]
-
-        else: # searching scientific names only
+        else: # The 'expand' flag is False, we will search scientific names only
             for taxid in taxNames:
                 if fuzzy==True:
                     if not name in taxNames[taxid]:
@@ -453,7 +472,10 @@ def name2taxid(name, rank=None, superkingdom=None, fuzzy=True, cutoff=0.7, max_m
             nameTid[name] = matched_taxid
             return nameTid[name][:max_matches]
     else:
-        return nameTid[name][:max_matches]
+        if len(nameTid[name]):
+            return nameTid[name][:max_matches]
+        else:
+            return []
 
 def taxid2nameOnRank(tid: Union[int, str], target_rank=None) -> str:
     """
