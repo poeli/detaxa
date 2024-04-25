@@ -376,13 +376,21 @@ def taxid2parent(tid: Union[int, str], norank: bool=False) -> str:
 
     return tid
 
+def name2taxid_reset():
+    """
+    Clean up cached results and searching domain
+    """
+    global nameTid, df_names
+    nameTid = {}
+    df_names = None
+    return
+
 def name2taxid(name: str, 
                rank: str=None, 
                superkingdom: str=None, 
-               fuzzy: bool=True, 
+               fuzzy: bool=False, 
                cutoff: float=0.7, 
-               max_matches: int=3, 
-               reset: bool=False, 
+               max_matches: int=3,
                expand: bool=True) -> list:
     """
     Get the taxonomic ID of a given taxonomic name.
@@ -391,26 +399,22 @@ def name2taxid(name: str,
         name (str): Taxonomic scientific name.
         rank (str, optional): The expected rank of the taxonomic name.
         superkingdom (str, optional): The expected superkingdom of the taxonomic name.
-        fuzzy (bool, optional): Whether to allow fuzzy search. Defaults to True.
-        cutoff (float, optional): Similarity cutoff for difflib.get_close_matches(). 
-            Only apply to `expand` mode. Cutoff will set to 1 if `fuzzy` set to False. Defaults to 0.7.
+        fuzzy (bool, optional): Whether to allow fuzzy search. Defaults to False.
+        cutoff (float, optional): Similarity cutoff for `difflib.get_close_matches`. 
+            Only apply to `expand` mode. Defaults to 0.7.
         max_matches (int, optional): Reporting max number of taxid. Defaults to 3.
-        reset (bool, optional): Mapping results are cached. Whether to clean up previous searches. 
-            Defaults to False.
         expand (bool, optional): Search the entire 'names.dmp' if True, otherwise search sientific names only. 
             Defaults to False.
-    
     Returns:
         list: The list of matched taxonomic ID.
     """
     global nameTid, df_names, taxonomy_dir
     import pandas as pd
 
-    if not fuzzy: cutoff=1
-
     # if expand is True, loading names.dmp
     names_dmp_file = taxonomy_dir+"/names.dmp"
 
+    # "expand" mode is ON
     if df_names is None and expand and os.path.isfile( names_dmp_file ):
         logging.debug(f"Loading {names_dmp_file}")
         df_names = pd.read_csv(names_dmp_file, 
@@ -420,62 +424,44 @@ def name2taxid(name: str,
                             usecols=['taxid','name'],
                             index_col='name')
         logging.debug(f"names.dmp loaded")
+    # "expand" mode is OFF, search loaded names only
+    else:
+        df_names = pd.DataFrame.from_dict(taxNames, orient='index', columns=['name'])
+        df_names = df_names.reset_index().rename(columns={'index': 'taxid'})
+        df_names = df_names.set_index('name')
     
-    if not name in nameTid or reset:
+    if not name in nameTid:
         matched_taxid = []
         df_temp = None
         logging.debug(f"Searching {name}...")
 
-        if expand:
-            if fuzzy==True:
-                import difflib
-                matches = difflib.get_close_matches(name, df_names.index, max_matches, cutoff)
-                logger.debug(f'{name}: {matches}')
-                df_temp = df_names.loc[matches,:]
+        if fuzzy==True:
+            import difflib
+            matches = difflib.get_close_matches(name, df_names.index, max_matches, cutoff)
+            logger.debug(f'{name}: {matches}')
+            df_temp = df_names.loc[matches,:]
+        else:
+            if name in df_names.index:
+                df_temp = df_names.loc[[name],:]
             else:
-                if name in df_names.index:
-                    df_temp = df_names.loc[[name],:]
-                else:
-                    df_temp = df_names.head(0)
+                df_temp = df_names.head(0)
 
-            if len(df_temp)==0:
-                nameTid[name] = []
-                return nameTid[name]
-
-            if rank:
-                df_temp['rank'] = df_temp.taxid.apply(taxid2rank)
-                idx = df_temp['rank']==rank
-                df_temp = df_temp[idx]
-            
-            if superkingdom:
-                df_temp['sk'] = df_temp.taxid.apply(lambda x: taxid2nameOnRank(x, 'superkingdom'))
-                idx = df_temp['sk']==superkingdom
-                df_temp = df_temp[idx]
-            
-            nameTid[name] = df_temp.head(max_matches).taxid.to_list()
+        if len(df_temp)==0:
+            nameTid[name] = []
             return nameTid[name]
-        else: # The 'expand' flag is False, we will search scientific names only
-            for taxid in taxNames:
-                if fuzzy==True:
-                    if not name in taxNames[taxid]:
-                        continue
-                else:
-                    if name!=taxNames[taxid]:
-                        continue
-                
-                if rank:
-                    if _getTaxRank(taxid)==rank:
-                        matched_taxid.append(taxid)
-                else:
-                    matched_taxid.append(taxid)
 
-                # return when the first match found
-                if len(matched_taxid)==max_matches:
-                    nameTid[name] = matched_taxid
-                    return nameTid[name]
-            
-            nameTid[name] = matched_taxid
-            return nameTid[name][:max_matches]
+        if rank:
+            df_temp['rank'] = df_temp.taxid.apply(taxid2rank)
+            idx = df_temp['rank']==rank
+            df_temp = df_temp[idx]
+        
+        if superkingdom:
+            df_temp['sk'] = df_temp.taxid.apply(lambda x: taxid2nameOnRank(x, 'superkingdom'))
+            idx = df_temp['sk']==superkingdom
+            df_temp = df_temp[idx]
+        
+        nameTid[name] = df_temp.head(max_matches).taxid.to_list()
+        return nameTid[name]
     else:
         if len(nameTid[name]):
             return nameTid[name][:max_matches]
