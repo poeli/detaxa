@@ -425,7 +425,7 @@ def name2taxid(name: str,
                             index_col='name')
         logging.debug(f"names.dmp loaded")
     # "expand" mode is OFF, search loaded names only
-    else:
+    elif df_names is None:
         df_names = pd.DataFrame.from_dict(taxNames, orient='index', columns=['name'])
         df_names = df_names.reset_index().rename(columns={'index': 'taxid'})
         df_names = df_names.set_index('name')
