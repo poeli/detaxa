@@ -35,10 +35,10 @@ elif os.path.isdir( os.getcwd()+"/taxonomy_db" ):
     taxonomy_dir = os.getcwd()+"/taxonomy_db"
 
 # init global dir
-taxDepths      = {}
-taxParents     = {}
-taxRanks       = {}
-taxNames       = {}
+taxDepths      = {"1": 0}
+taxParents     = {"1": "1"}
+taxRanks       = {"1": "root"}
+taxNames       = {"1": "root"}
 taxMerged      = {}
 taxNumChilds   = {}
 accTid         = {}
@@ -68,7 +68,10 @@ def _getTaxParent(tid: str) -> str:
 def _getTaxRank(tid: str) -> str:
     """Get the rank of a taxonomy ID"""
     if tid in taxMerged: tid = taxMerged[tid]
-    return taxRanks[tid]
+    if tid in taxRanks:
+        return taxRanks[tid]
+    else:
+        return None
 
 def _die(msg: str) -> str:
     sys.exit(msg)
