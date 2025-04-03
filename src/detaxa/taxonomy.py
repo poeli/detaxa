@@ -210,7 +210,7 @@ def _taxid2lineage(tid: Union[int, str],
     if print_strain==True:
         if orig_rank == "strain":
             info["strain"]["name"]  = str_name
-            info["strain"]["taxid"] = tid
+            info["strain"]["taxid"] = tid_orig
 
     tidLineageDict[tid] = info
     return info
