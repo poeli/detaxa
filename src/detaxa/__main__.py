@@ -26,12 +26,18 @@ def cli():
               default='tsv',
               type=click.Choice(['tsv', 'lineage', 'gtdb_taxonomy', 'gtdb_metadata'], case_sensitive=False)
               )
+
+@click.option('--force-viruses-domain',
+              help='Force "Viruses" to be under "domain" level',
+              is_flag=True,
+              default=False)
+
 @click.option('--debug',
               help='debug mode',
               is_flag=True,
               default=False)
 
-def taxid(taxid, database, custom_taxa, custom_fmt, debug):
+def taxid(taxid, database, custom_taxa, custom_fmt, force_viruses_domain, debug):
     if debug:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -42,7 +48,7 @@ def taxid(taxid, database, custom_taxa, custom_fmt, debug):
     if custom_fmt.startswith('gtdb'):
         t.loadGTDBTaxonomy(cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
     else:
-        t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt)
+        t.loadTaxonomy( database, cus_taxonomy_file=custom_taxa, cus_taxonomy_format=custom_fmt, force_viruses_domain=force_viruses_domain)
 
     if taxid:
         print( "taxid2name( %s )                 => %s" % (taxid, t.taxid2name(taxid)) )

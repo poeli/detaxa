@@ -8,7 +8,27 @@ import sys
 import os
 import tarfile
 import logging
+import json
+import glob
+import re
+import subprocess
 from typing import Union, Optional
+
+# Import optional dependencies
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+try:
+    import difflib
+except ImportError:
+    difflib = None
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 try:
     from . import __version__
@@ -230,7 +250,7 @@ def _loadAbbrJson(abbr_json_path: str) -> None:
             f.close
     else:
         major_level_to_abbr = {
-            "superkingdom" : "sk",
+            "domain"       : "d",
             "phylum"       : "p",
             "class"        : "c",
             "order"        : "o",
@@ -390,7 +410,7 @@ def name2taxid_reset():
 
 def name2taxid(name: str, 
                rank: str=None, 
-               superkingdom: str=None, 
+               domain: str=None, 
                fuzzy: bool=False, 
                cutoff: float=0.7, 
                max_matches: int=3,
@@ -401,7 +421,7 @@ def name2taxid(name: str,
     Args:
         name (str): Taxonomic scientific name.
         rank (str, optional): The expected rank of the taxonomic name.
-        superkingdom (str, optional): The expected superkingdom of the taxonomic name.
+        domain (str, optional): The expected domain of the taxonomic name.
         fuzzy (bool, optional): Whether to allow fuzzy search. Defaults to False.
         cutoff (float, optional): Similarity cutoff for `difflib.get_close_matches`. 
             Only apply to `expand` mode. Defaults to 0.7.
@@ -458,11 +478,11 @@ def name2taxid(name: str,
             idx = df_temp['rank']==rank
             df_temp = df_temp[idx]
         
-        if superkingdom:
-            df_temp['sk'] = df_temp.taxid.apply(lambda x: taxid2nameOnRank(x, 'superkingdom'))
-            idx = df_temp['sk']==superkingdom
+        if domain:
+            df_temp['d'] = df_temp.taxid.apply(lambda x: taxid2nameOnRank(x, 'domain'))
+            idx = df_temp['d']==domain
             df_temp = df_temp[idx]
-        
+
         nameTid[name] = df_temp.head(max_matches).taxid.to_list()
         return nameTid[name]
     else:
@@ -669,7 +689,7 @@ def lca_taxid(taxids: list) -> str:
     """ lca_taxid
     Return lowest common ancestor (LCA) taxid of input taxids
     """
-    ranks = ['strain','species','genus','family','order','class','phylum','superkingdom']
+    ranks = ['strain','species','genus','family','order','class','phylum','domain']
 
     merged_dict = _autoVivification()
     for tid in taxids:
@@ -839,9 +859,10 @@ def taxid2decendentOnRank(tid: Union[int, str], target_rank=None) -> list:
         return tids
 
 def loadTaxonomy(dbpath: Optional[str] = None,
-                 cus_taxonomy_file: Optional[str] = None, 
+                 cus_taxonomy_file: Optional[str] = None,
                  cus_taxonomy_format: str = 'tsv',
-                 auto_download: bool = True) -> None:
+                 auto_download: bool = True,
+                 force_viruses_domain: bool = False) -> None:
     """
     Load taxonomy files into memory for use in subsequent conversions.
 
@@ -926,6 +947,19 @@ def loadTaxonomy(dbpath: Optional[str] = None,
     elif os.path.isfile(cus_taxonomy_file):
         logger.fatal( f"invalid cus_taxonomy_format: {cus_taxonomy_format}" )
         _die(f"[ERROR] Invalid cus_taxonomy_format: {cus_taxonomy_format}")
+
+    # Replace "superkingdom" with "domain" in taxRanks
+    superkingdom_tids = [tid for tid, rank in taxRanks.items() if rank == "superkingdom"]
+    for tid in superkingdom_tids:
+        taxRanks[tid] = "domain"
+
+    # force all viruses to be under "Viruses" domain (taxid:10239)
+    if force_viruses_domain:
+        tid = "10239"
+        if tid in taxRanks:
+            taxRanks[tid] = "domain"
+
+    logger.info( f"Total {len(taxNames)} taxids loaded." )
 
 def NCBITaxonomyDownload(dir=None, taxdump=True, acc_wgs=False, acc_nucl=False, acc_prot=False, acc_pdb=False, acc_dead=True):
     import requests
@@ -1112,6 +1146,8 @@ def loadNCBITaxonomy(taxdump_tgz_file: Optional[str] = None,
                 taxMerged[fields[0]] = fields[1].strip('\t')
             f.close()
             logger.info( f"Done parsing merged taxonomy file." )
+
+    
     
 def loadMgnifyTaxonomy(mgnify_taxonomy_file=None):
     """
@@ -1130,8 +1166,8 @@ def loadMgnifyTaxonomy(mgnify_taxonomy_file=None):
                     line = line.rstrip('\r\n')
                     if not line: continue
                     if line.startswith('#'): continue
-                    if not line.startswith('sk__'):
-                        logger.warn( f"A text line of lineage has to start with 'sk__'...skipped: {line}" )
+                    if not line.startswith('d__'):
+                        logger.warning( f"A text line of lineage has to start with 'd__'...skipped: {line}" )
                         continue
 
                     temp = line.split(';')
@@ -1156,7 +1192,7 @@ def loadMgnifyTaxonomy(mgnify_taxonomy_file=None):
                             if p_name=="":
                                 p_name = f'{name} - no_{rank_abbr}_rank'
                         except:
-                            # for the superkingdom rank, assign parant taxid to 1 (root)
+                            # for the domain rank, assign parant taxid to 1 (root)
                             p_name = '1'
                             if not '1' in taxRanks: taxRanks['1'] = 'root'
                             if not '1' in taxNames: taxNames['1'] = 'root'
@@ -1242,13 +1278,13 @@ def loadGTDBTaxonomy(gtdb_taxonomy_file=None, gtdb_taxonomy_format="gtdb_metadat
                             if p_name=="":
                                 p_name = f'{name} - no_{p_rank_abbr}_rank'
                         except:
-                            # for the *first* taxa in lineage line (usually superkingdom), assign parant taxid to 1 (root)
+                            # for the *first* taxa in lineage line (usually domain), assign parant taxid to 1 (root)
                             p_name = '1'
                             if not '1' in taxRanks: taxRanks['1'] = 'root'
                             if not '1' in taxNames: taxNames['1'] = 'root'
 
                         if rank_abbr=='d':
-                            rank = 'superkingdom'
+                            rank = 'domain'
                         elif rank_abbr=='x':
                             rank = 'strain'
                         if rank_abbr in abbr_to_major_level:
