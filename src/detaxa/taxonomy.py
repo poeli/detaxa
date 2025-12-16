@@ -438,24 +438,25 @@ def name2taxid(name: str,
     names_dmp_file = taxonomy_dir+"/names.dmp"
 
     # "expand" mode is ON
-    if df_names is None and expand and os.path.isfile( names_dmp_file ):
-        logging.debug(f"Loading {names_dmp_file}")
-        df_names = pd.read_csv(names_dmp_file, 
-                            sep='\t', 
-                            header=None, 
-                            names=['taxid', 'sep1', 'name', 'sep2', 'annot', 'sep3', 'type', 'sep4'], 
-                            usecols=['taxid','name'],
-                            index_col='name')
-        logging.debug(f"names.dmp loaded")
-    # "expand" mode is OFF, search loaded names only
-    elif df_names is None:
-        df_names = pd.DataFrame.from_dict(taxNames, orient='index', columns=['name'])
-        df_names = df_names.reset_index().rename(columns={'index': 'taxid'})
-        df_names = df_names.set_index('name')
-    
+    if df_names is None: 
+        if expand:
+            if os.path.isfile( names_dmp_file ):
+                logging.debug(f"Loading {names_dmp_file}")
+                df_names = pd.read_csv(names_dmp_file, 
+                                    sep='\t', 
+                                    header=None, 
+                                    names=['taxid', 'sep1', 'name', 'sep2', 'annot', 'sep3', 'type', 'sep4'], 
+                                    usecols=['taxid','name'],
+                                    index_col='name')
+                logging.debug(f"names.dmp loaded")
+        else:
+            df_names = pd.DataFrame.from_dict(taxNames, orient='index', columns=['name'])
+            df_names = df_names.reset_index().rename(columns={'index': 'taxid'})
+            df_names = df_names.set_index('name')
+
     if not name in nameTid:
         matched_taxid = []
-        df_temp = None
+        df_temp = df_names.head(0)
         logging.debug(f"Searching {name}...")
 
         if fuzzy==True:
@@ -466,8 +467,6 @@ def name2taxid(name: str,
         else:
             if name in df_names.index:
                 df_temp = df_names.loc[[name],:]
-            else:
-                df_temp = df_names.head(0)
 
         if len(df_temp)==0:
             nameTid[name] = []
@@ -577,7 +576,12 @@ def taxidIsLeaf(tid: Union[int, str]) -> bool:
         return False
 
 
-def taxid2fullLineage(tid: Union[int, str], sep: str='|', use_rank_abbr=False, space2underscore=True) -> str:
+def taxid2fullLineage(tid: Union[int, str], 
+                      sep: str=';', 
+                      use_mpa_style: bool=False,
+                      use_rank_abbr: bool=False, 
+                      space2underscore: bool=True,
+                      include_taxid: bool=False) -> str:
     """
     Returns the full lineage of the target taxon in a specified format.
 
@@ -593,19 +597,31 @@ def taxid2fullLineage(tid: Union[int, str], sep: str='|', use_rank_abbr=False, s
     """
     link = _taxid2fullLink(tid)
     texts = []
+    tid_text = ""
     if len(link):
         for p_taxID in link:
             tid = link[p_taxID]
             rank = _getTaxRank(tid)
             name = _getTaxName(tid)
 
-            if use_rank_abbr and (rank in major_level_to_abbr):
-                rank =  major_level_to_abbr[rank]
+            if use_rank_abbr and ((rank in major_level_to_abbr) or (rank.replace('sub','').replace('super','').replace('infra','') in major_level_to_abbr)):
+                major_level_to_abbr['kingdom'] = 'k'
 
-            if sep == ';':
-                texts.append(f"{rank}__{name}")
+                if rank.startswith('sub'):
+                    rank = 'sub_'+major_level_to_abbr[rank.replace('sub','')]
+                elif rank.startswith('super'):
+                    rank = 'sup_'+major_level_to_abbr[rank.replace('super','')]
+                elif rank.startswith('infra'):
+                    rank = 'inf_'+major_level_to_abbr[rank.replace('infra','')]
+                else:
+                    rank =  major_level_to_abbr[rank]
+
+            if use_mpa_style:
+                tid_text = f"__tid:{tid}" if include_taxid else ""
+                texts.append(f"{rank}{tid_text}__{name}")
             else:
-                texts.append(f"{rank}|{tid}|{name}")
+                tid_text = f"|tid:{tid}" if include_taxid else ""
+                texts.append(f"{rank}{tid_text}|{name}")
     
     texts.reverse()
 

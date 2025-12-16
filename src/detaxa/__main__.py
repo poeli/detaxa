@@ -64,7 +64,8 @@ def taxid(taxid, database, custom_taxa, custom_fmt, force_viruses_domain, debug)
         print( "taxid2lineage( %s, sep=';' )     => %s" % (taxid, t.taxid2lineage(taxid, sep=';')) )
         print( "taxid2lineageDICT( %s )          => %s" % (taxid, t.taxid2lineageDICT(taxid)) )
         print( "taxid2fullLineage( %s )          => %s" % (taxid, t.taxid2fullLineage(taxid)) )
-        print( "taxid2fullLineage( %s, sep=';' ) => %s" % (taxid, t.taxid2fullLineage(taxid, sep=';')) )
+        print( "taxid2fullLineage( %s, use_mpa_style=True, use_rank_abbr=True )\n" \
+              "                                  => %s" % (taxid, t.taxid2fullLineage(taxid, use_mpa_style=True, use_rank_abbr=True)) )
         print( "taxid2fullLinkDict( %s )         => %s" % (taxid, t.taxid2fullLinkDict(taxid)) )
     else:
         print( "No taxid found." )
